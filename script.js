@@ -7,7 +7,7 @@ const SHEET_CONFIG = {
 
 // Base URL untuk Google Sheets
 const SHEET_BASE_URL =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFH0squhL_c2KoNryfBrysWZEKTTUpthg_1XVE-fT3r7-ew1_lkbFqENefrlBLHClis53FyDdNiUkh/pub";
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZ4Jrb5j2IVmK72GbEhHoyIzck-H-khwypavvFpGD8yxetAErp-YpE6Krtu8OtuOTMYzUozy-CrAy5/pub";
 
 // State aplikasi
 const appState = {
