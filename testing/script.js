@@ -21,7 +21,7 @@ const appState = {
   youtubePlayer: null,
   userInteracted: false,
   autoplayAttempted: false,
-  isVideoMuted: true, // PERBAIKAN: Mulai dengan muted
+  isVideoMuted: true,
   
   // CACHE SYSTEM: Tambahkan properti cache
   cache: {
@@ -99,6 +99,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Load YouTube API
   loadYouTubeAPI();
+  
+  // Panggil responsive layout handler
+  setTimeout(handleResponsiveLayout, 100);
 });
 
 // Setup listeners untuk interaksi pengguna
@@ -118,7 +121,7 @@ function handleUserInteraction() {
     console.log("Interaksi pengguna terdeteksi - autoplay diizinkan");
     appState.userInteracted = true;
     
-    // PERBAIKAN: Update status user interaction untuk video
+    // Update status user interaction untuk video
     document.body.classList.add('user-interacted');
     
     // Coba unmute dan play video jika sedang ditampilkan
@@ -240,10 +243,10 @@ function showVideo() {
   const videoContainerDiv = document.createElement("div");
   videoContainerDiv.id = "player";
   videoContainerDiv.style.width = "100%";
-  videoContainerDiv.style.height = "400px";
-  videoContainerDiv.style.borderRadius = "8px";
-  videoContainerDiv.style.overflow = "hidden";
-  videoContainerDiv.style.position = "relative";
+  videoContainerDiv.style.height = "100%";
+  videoContainerDiv.style.position = "absolute";
+  videoContainerDiv.style.top = "0";
+  videoContainerDiv.style.left = "0";
 
   videoWrapper.appendChild(videoContainerDiv);
 
@@ -255,7 +258,7 @@ function showVideo() {
   }, 500);
 }
 
-// PERBAIKAN UTAMA: Setup YouTube Player dengan strategi autoplay yang lebih baik
+// Setup YouTube Player dengan strategi autoplay yang lebih baik
 function setupYouTubePlayer(videoUrl) {
   const videoId = extractVideoId(videoUrl);
 
@@ -266,23 +269,23 @@ function setupYouTubePlayer(videoUrl) {
   }
 
   appState.autoplayAttempted = false;
-  appState.isVideoMuted = true; // Mulai dengan muted
+  appState.isVideoMuted = true;
 
-  // PERBAIKAN: Gunakan muted autoplay dulu, baru unmute setelah interaksi
+  // Gunakan muted autoplay dulu, baru unmute setelah interaksi
   appState.youtubePlayer = new YT.Player("player", {
-    height: "400",
+    height: "100%",
     width: "100%",
     videoId: videoId,
     playerVars: {
-      autoplay: 1, // PERBAIKAN: Aktifkan autoplay
-      mute: 1, // PERBAIKAN: Mute dulu untuk memungkinkan autoplay
+      autoplay: 1,
+      mute: 1,
       enablejsapi: 1,
       rel: 0,
       playsinline: 1,
-      controls: 1, // Tampilkan kontrol untuk user
+      controls: 1,
       modestbranding: 1,
       showinfo: 0,
-      iv_load_policy: 3, // Nonaktifkan anotasi
+      iv_load_policy: 3,
     },
     events: {
       onReady: onPlayerReady,
@@ -303,7 +306,7 @@ function extractVideoId(url) {
 function onPlayerReady(event) {
   console.log("YouTube Player siap, mencoba autoplay...");
   
-  // PERBAIKAN: Coba play dengan strategi bertahap
+  // Coba play dengan strategi bertahap
   attemptSmartAutoplay(event.target);
 }
 
@@ -330,7 +333,7 @@ function attemptSmartAutoplay(player) {
   // Strategi 2: Muted autoplay (biasanya diizinkan browser)
   console.log("Mencoba muted autoplay...");
   try {
-    player.mute(); // Pastikan muted
+    player.mute();
     player.playVideo();
     appState.isVideoMuted = true;
     console.log("Muted autoplay berhasil");
@@ -349,7 +352,7 @@ function attemptSmartAutoplay(player) {
 function playVideoWithSound() {
   if (appState.youtubePlayer && appState.youtubePlayer.playVideo) {
     try {
-      // PERBAIKAN: Pastikan unmute dulu
+      // Pastikan unmute dulu
       if (appState.isVideoMuted) {
         appState.youtubePlayer.unMute();
         appState.isVideoMuted = false;
@@ -382,7 +385,7 @@ function onPlayerStateChange(event) {
     playNextVideo();
   }
 
-  // PERBAIKAN: Unmute otomatis saat video mulai diputar
+  // Unmute otomatis saat video mulai diputar
   if (event.data === YT.PlayerState.PLAYING && appState.userInteracted && appState.isVideoMuted) {
     setTimeout(() => {
       try {
@@ -407,7 +410,7 @@ function onPlayerError(event) {
   showVideoFallback();
 }
 
-// PERBAIKAN: Tampilkan tombol unmute untuk muted video
+// Tampilkan tombol unmute untuk muted video
 function showUnmuteButton(player) {
   const videoWrapper = document.querySelector(".video-wrapper");
   
@@ -421,34 +424,6 @@ function showUnmuteButton(player) {
     <i class="fas fa-volume-mute" style="margin-right: 8px;"></i>
     Klik untuk Menyalakan Suara
   `;
-  unmuteBtn.style.cssText = `
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-    background: rgba(0, 0, 0, 0.7);
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 6px;
-    cursor: pointer;
-    z-index: 90;
-    font-family: 'Poppins', sans-serif;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-  `;
-
-  unmuteBtn.addEventListener("mouseenter", function () {
-    this.style.background = "rgba(0, 0, 0, 0.9)";
-    this.style.transform = "scale(1.05)";
-  });
-
-  unmuteBtn.addEventListener("mouseleave", function () {
-    this.style.background = "rgba(0, 0, 0, 0.7)";
-    this.style.transform = "scale(1)";
-  });
 
   unmuteBtn.onclick = function () {
     handleUserInteraction();
@@ -471,15 +446,6 @@ function showInteractivePlayButton(player) {
     <i class="fas fa-play" style="margin-right: 8px;"></i>
     Klik untuk Memutar Video
   `;
-  
-  // Style sudah didefinisikan di CSS
-  // Tambahkan inline style hanya untuk positioning
-  playBtn.style.cssText = `
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-  `;
 
   playBtn.onclick = function () {
     handleUserInteraction();
@@ -490,12 +456,6 @@ function showInteractivePlayButton(player) {
   const instruction = document.createElement("div");
   instruction.className = "play-instruction";
   instruction.innerHTML = "Browser memerlukan interaksi untuk memutar video";
-  instruction.style.cssText = `
-    position: absolute;
-    top: calc(50% + 60px);
-    left: 50%;
-    transform: translateX(-50%);
-  `;
 
   videoWrapper.appendChild(playBtn);
   videoWrapper.appendChild(instruction);
@@ -507,7 +467,7 @@ function showVideoFallback() {
   const videoWrapper = document.querySelector(".video-wrapper");
   
   videoWrapper.innerHTML = `
-    <div style="text-align: center; padding: 40px; color: white; background: rgba(0,0,0,0.7); border-radius: 8px;">
+    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; color: white; background: rgba(0,0,0,0.7); border-radius: 8px;">
       <i class="fas fa-video-slash" style="font-size: 48px; margin-bottom: 20px;"></i>
       <h3>Video Tidak Dapat Diputar</h3>
       <p>Video iklan sedang tidak tersedia</p>
@@ -589,6 +549,9 @@ async function loadPriceData() {
 
       console.log(`Data loaded from cache - Emas: ${appState.tableData.emas.length}, Antam: ${appState.tableData.antam.length}, Archi: ${appState.tableData.archi.length}`);
       displayTables("emas");
+      
+      // Setelah data dimuat, update layout
+      setTimeout(handleResponsiveLayout, 50);
       return;
     }
     
@@ -616,6 +579,9 @@ async function loadPriceData() {
 
     console.log(`Data loaded from API - Emas: ${appState.tableData.emas.length}, Antam: ${appState.tableData.antam.length}, Archi: ${appState.tableData.archi.length}`);
     displayTables("emas");
+    
+    // Setelah data dimuat, update layout
+    setTimeout(handleResponsiveLayout, 50);
   } catch (error) {
     console.error("Error loading CSV data:", error);
     
@@ -637,6 +603,9 @@ async function loadPriceData() {
     } else {
       showError();
     }
+    
+    // Tetap update layout meskipun error
+    setTimeout(handleResponsiveLayout, 50);
   }
 }
 
@@ -971,6 +940,57 @@ document.addEventListener("visibilitychange", function () {
   }
 });
 
+// Fungsi untuk handle responsive layout
+function handleResponsiveLayout() {
+  const isMobile = window.innerWidth <= 768;
+  const isTablet = window.innerWidth > 768 && window.innerWidth <= 1024;
+  const isTV = window.innerWidth > 1920;
+  
+  // Sesuaikan font size untuk TV besar
+  if (isTV) {
+    document.documentElement.style.fontSize = '18px';
+  } else {
+    document.documentElement.style.fontSize = '';
+  }
+  
+  // Sesuaikan tinggi tabel
+  const tables = document.querySelectorAll('.table-wrapper');
+  const viewportHeight = window.innerHeight;
+  const availableHeight = viewportHeight - 200; // Kurangi header dan footer
+  
+  tables.forEach(table => {
+    if (isMobile) {
+      table.style.minHeight = '300px';
+    } else if (isTablet) {
+      table.style.minHeight = '350px';
+    } else {
+      table.style.minHeight = '400px';
+    }
+    
+    // Pastikan tidak melebihi viewport
+    if (table.offsetHeight > availableHeight) {
+      table.style.minHeight = availableHeight + 'px';
+    }
+  });
+  
+  // Sesuaikan marquee speed berdasarkan lebar layar
+  const marqueeText = document.getElementById('marqueeText');
+  if (marqueeText) {
+    const textLength = marqueeText.textContent.length;
+    const baseDuration = isMobile ? 120 : isTablet ? 90 : 60;
+    const duration = Math.max(baseDuration, textLength / 8);
+    
+    marqueeText.style.animation = 'none';
+    setTimeout(() => {
+      marqueeText.style.animation = `marquee ${duration}s linear infinite`;
+    }, 10);
+  }
+}
+
+// Event listener untuk resize
+window.addEventListener('resize', handleResponsiveLayout);
+window.addEventListener('orientationchange', handleResponsiveLayout);
+
 // Fungsi untuk refresh data secara periodik
 function startPeriodicRefresh() {
   setInterval(() => {
@@ -990,3 +1010,6 @@ setTimeout(() => {
 window.onYouTubeIframeAPIReady = function () {
   console.log("YouTube API siap digunakan");
 };
+
+// Initialize responsive layout
+handleResponsiveLayout();
