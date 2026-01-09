@@ -31,7 +31,10 @@
                 <div class="ticker-container">
                     <div class="ticker-wrapper">
                         <div class="ticker-content">
-                            <span class="ticker-text" id="marqueeText">Memuat informasi harga emas terbaru...</span>
+                            <!-- MARQUEE TEXT DIKEMBALIKAN KE ELEMENT ASLI -->
+                            <marquee class="ticker-text" id="marqueeText" behavior="scroll" direction="left" scrollamount="3">
+                                Memuat informasi harga emas terbaru...
+                            </marquee>
                         </div>
                     </div>
                 </div>
@@ -51,21 +54,28 @@
                             <i class="fas fa-chevron-left"></i>
                         </button>
 
-                        <div class="price-table-card" id="tableEmas">
-                            <div class="table-header">
-                                <h2 class="table-title">Harga Emas</h2>
+                        <!-- TABEL RESPONSIVE DENGAN WRAPPER BARU -->
+                        <div class="tables-responsive-wrapper">
+                            <div class="price-table-card" id="tableEmas">
+                                <div class="table-header">
+                                    <h2 class="table-title">Harga Emas</h2>
+                                </div>
+                                <div class="table-body">
+                                    <div class="table-scroll-wrapper">
+                                        <div class="table-scroll" id="priceTableLeft"></div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="table-body">
-                                <div class="table-scroll" id="priceTableLeft"></div>
-                            </div>
-                        </div>
 
-                        <div class="price-table-card" id="tableAntam">
-                            <div class="table-header">
-                                <h2 class="table-title">Harga Antam</h2>
-                            </div>
-                            <div class="table-body">
-                                <div class="table-scroll" id="priceTableRight"></div>
+                            <div class="price-table-card" id="tableAntam">
+                                <div class="table-header">
+                                    <h2 class="table-title">Harga Antam</h2>
+                                </div>
+                                <div class="table-body">
+                                    <div class="table-scroll-wrapper">
+                                        <div class="table-scroll" id="priceTableRight"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -74,9 +84,12 @@
                         </button>
                     </div>
 
-                    <!-- Video Ad Container -->
+                    <!-- Video Ad Container - DIPERBAIKI RESPONSIVENYA -->
                     <div class="video-ad-container" id="videoContainer">
                         <div class="video-player-wrapper">
+                            <div class="video-responsive-wrapper">
+                                <div id="player"></div>
+                            </div>
                             <div class="video-placeholder" id="videoPlaceholder">
                                 <div class="placeholder-content">
                                     <i class="fas fa-play-circle"></i>
@@ -100,7 +113,7 @@
             </div>
         </main>
 
-        <!-- Footer -->
+        <!-- Footer - DIPERKECIL -->
         <footer class="main-footer">
             <div class="footer-container">
                 <div class="footer-grid">
