@@ -1045,4 +1045,107 @@ body {
     }
     
     .tab-btn {
-        font-size: 
+        font-size: 0.7rem;
+        padding: 6px 10px;
+        min-width: 100px;
+    }
+    
+    .table-title {
+        font-size: var(--font-sm);
+    }
+    
+    .table-content {
+        max-height: 250px;
+    }
+    
+    .price-table.very-compact-mode {
+        font-size: 10px;
+    }
+    
+    .control-btn {
+        min-width: 80px;
+        font-size: 0.7rem;
+    }
+}
+
+/* TV & Large Screen (1921px+) */
+@media (min-width: 1921px) {
+    :root {
+        --container-max: 1600px;
+        --font-base: 1.125rem;
+        --font-lg: 1.375rem;
+        --font-xl: 1.5rem;
+        --font-xxl: 1.75rem;
+        --font-xxxl: 2.5rem;
+    }
+    
+    .price-table {
+        font-size: var(--font-lg);
+    }
+    
+    .price-table th,
+    .price-table td {
+        padding: var(--space-lg);
+    }
+}
+
+/* Print Styles */
+@media print {
+    .main-header,
+    .video-ad-container,
+    .table-tabs,
+    .tab-btn:not(.active),
+    .hamburger-btn {
+        display: none !important;
+    }
+    
+    body {
+        background: white !important;
+        color: black !important;
+        font-size: 12pt !important;
+    }
+    
+    .price-table-card.active {
+        display: flex !important;
+        box-shadow: none !important;
+        border: 2px solid #ddd !important;
+        break-inside: avoid;
+    }
+    
+    .price-table {
+        font-size: 10pt !important;
+    }
+    
+    .main-footer {
+        background: white !important;
+        color: black !important;
+        border-top: 2px solid #ddd !important;
+    }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    .price-table-card.active {
+        animation: none;
+    }
+    
+    .tab-btn:hover,
+    .control-btn:hover,
+    .price-table-card:hover {
+        transform: none;
+    }
+    
+    .ticker-text {
+        animation: none;
+        padding-left: 0;
+        text-align: center;
+    }
+}
