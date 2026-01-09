@@ -217,6 +217,7 @@ function hideVideo() {
     app.isVideoMuted = true;
     
     videoWrapper.innerHTML = `
+        <div class="video-responsive-wrapper"></div>
         <div class="video-placeholder" id="videoPlaceholder">
             <div class="placeholder-content">
                 <i class="fas fa-play-circle"></i>
@@ -594,8 +595,7 @@ async function loadRunningText() {
         if (cachedData) {
             updateRunningText(cachedData);
         } else {
-            document.getElementById('marqueeText').textContent = 
-                "Harga emas terkini - Informasi terupdate setiap hari";
+            updateRunningText([{ teks: "Harga emas terkini - Informasi terupdate setiap hari" }]);
         }
     }
 }
@@ -685,9 +685,9 @@ function createTableHTML(data) {
         <table class="price-table">
             <thead>
                 <tr>
-                    <th>Kode</th>
-                    <th>Harga Jual</th>
-                    <th>Buyback</th>
+                    <th style="width: 30%;">Kode</th>
+                    <th style="width: 35%;">Harga Jual</th>
+                    <th style="width: 35%;">Buyback</th>
                 </tr>
             </thead>
             <tbody>
@@ -718,7 +718,7 @@ function updateRunningText(data) {
     if (!marqueeElement) return;
     
     if (!data || !Array.isArray(data) || data.length === 0) {
-        marqueeElement.textContent = "Harga emas terkini - Informasi terupdate setiap hari";
+        marqueeElement.innerHTML = "Harga emas terkini - Informasi terupdate setiap hari";
         return;
     }
     
@@ -727,15 +727,17 @@ function updateRunningText(data) {
         .filter(text => text && text.length > 0);
     
     if (texts.length === 0) {
-        marqueeElement.textContent = "Harga emas terkini - Informasi terupdate setiap hari";
+        marqueeElement.innerHTML = "Harga emas terkini - Informasi terupdate setiap hari";
         return;
     }
     
+    // Gunakan innerHTML agar marquee tag berfungsi dengan benar
     const combinedText = texts.join(' • ');
-    marqueeElement.textContent = combinedText;
+    marqueeElement.innerHTML = escapeHTML(combinedText);
     
-    // Adjust animation speed based on text length
-    adjustTickerSpeed(combinedText.length);
+    // Atur speed marquee berdasarkan panjang teks
+    const speed = Math.max(3, Math.min(10, Math.floor(200 / combinedText.length)));
+    marqueeElement.setAttribute('scrollamount', speed);
 }
 
 // ============================================
@@ -769,17 +771,14 @@ function showVideo() {
     // Clear and setup video container
     videoWrapper.innerHTML = '';
     
+    const videoResponsiveWrapper = document.createElement('div');
+    videoResponsiveWrapper.className = 'video-responsive-wrapper';
+    
     const videoDiv = document.createElement('div');
     videoDiv.id = 'player';
-    videoDiv.style.cssText = `
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-    `;
     
-    videoWrapper.appendChild(videoDiv);
+    videoResponsiveWrapper.appendChild(videoDiv);
+    videoWrapper.appendChild(videoResponsiveWrapper);
     
     // Show video container
     videoContainer.classList.add('active');
@@ -982,6 +981,31 @@ function showInteractivePlayButton() {
         <i class="fas fa-play-circle"></i>
         Klik untuk Memutar Video
     `;
+    playBtn.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, var(--primary-gold), var(--gold-dark));
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        border-radius: 12px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 8px 32px rgba(212, 175, 55, 0.4);
+        transition: all 0.3s ease;
+        min-width: 250px;
+        text-align: center;
+        backdrop-filter: blur(4px);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+    `;
     
     playBtn.onclick = function() {
         app.setUserInteracted();
@@ -992,6 +1016,23 @@ function showInteractivePlayButton() {
     const instruction = document.createElement('div');
     instruction.className = 'video-instruction';
     instruction.textContent = 'Browser memerlukan interaksi untuk memutar video';
+    instruction.style.cssText = `
+        position: absolute;
+        top: calc(50% + 60px);
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 12px;
+        text-align: center;
+        z-index: 100;
+        backdrop-filter: blur(4px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        max-width: 280px;
+        width: 90%;
+    `;
     
     videoWrapper.appendChild(playBtn);
     videoWrapper.appendChild(instruction);
@@ -1055,7 +1096,7 @@ function handleResponsiveLayout() {
         } else if (isLargeScreen) {
             table.style.minHeight = '500px';
         } else {
-            table.style.minHeight = '600px';
+            table.style.minHeight = '550px';
         }
         
         // Ensure doesn't exceed viewport
@@ -1064,14 +1105,13 @@ function handleResponsiveLayout() {
         }
     });
     
-    // Adjust ticker speed
-    adjustTickerSpeedBasedOnWidth(width);
-    
-    // Adjust font sizes for TV
-    if (isTV) {
-        document.documentElement.style.fontSize = '18px';
+    // Adjust table layout for mobile
+    if (isMobile) {
+        document.querySelector('.tables-responsive-wrapper').style.gridTemplateColumns = '1fr';
+    } else if (isTablet) {
+        document.querySelector('.tables-responsive-wrapper').style.gridTemplateColumns = 'repeat(auto-fit, minmax(350px, 1fr))';
     } else {
-        document.documentElement.style.fontSize = '';
+        document.querySelector('.tables-responsive-wrapper').style.gridTemplateColumns = 'repeat(auto-fit, minmax(400px, 1fr))';
     }
     
     // Handle mobile menu
@@ -1086,34 +1126,6 @@ function handleResponsiveLayout() {
             hamburgerBtn.style.display = 'none';
         }
     }
-}
-
-function adjustTickerSpeedBasedOnWidth(width) {
-    const marqueeText = document.getElementById('marqueeText');
-    if (!marqueeText) return;
-    
-    const textLength = marqueeText.textContent.length;
-    let baseDuration;
-    
-    if (width <= 480) baseDuration = 40;
-    else if (width <= 768) baseDuration = 50;
-    else if (width <= 1024) baseDuration = 60;
-    else if (width <= 1440) baseDuration = 70;
-    else baseDuration = 80;
-    
-    const duration = Math.max(baseDuration, textLength / 15);
-    
-    // Smooth transition
-    marqueeText.style.transition = 'none';
-    marqueeText.style.animation = 'none';
-    
-    setTimeout(() => {
-        marqueeText.style.animation = `tickerScroll ${duration}s linear infinite`;
-    }, 10);
-}
-
-function adjustTickerSpeed(textLength) {
-    adjustTickerSpeedBasedOnWidth(window.innerWidth);
 }
 
 // ============================================
