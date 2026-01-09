@@ -1,1015 +1,1262 @@
-// Konfigurasi Sheet
-const SHEET_CONFIG = {
-  harga: { gid: "216173443", name: "Harga" },
-  runningText: { gid: "1779766141", name: "RunningText" },
-  iklan: { gid: "1303897065", name: "Iklan" },
-};
-
-// Base URL untuk Google Sheets
-const SHEET_BASE_URL =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZ4Jrb5j2IVmK72GbEhHoyIzck-H-khwypavvFpGD8yxetAErp-YpE6Krtu8OtuOTMYzUozy-CrAy5/pub";
-
-// State aplikasi dengan cache
-const appState = {
-  tableData: {},
-  currentTableType: "emas",
-  rotationInterval: null,
-  adsData: [],
-  currentVideoIndex: 0,
-  videoPlayed: false,
-  isYouTubeAPILoaded: false,
-  youtubePlayer: null,
-  userInteracted: false,
-  autoplayAttempted: false,
-  isVideoMuted: true,
-  
-  // CACHE SYSTEM: Tambahkan properti cache
-  cache: {
-    harga: {
-      data: null,
-      lastFetch: 0,
-      expiration: 5 * 60 * 1000 // 5 menit
+// ============================================
+// CONFIGURATION & CONSTANTS
+// ============================================
+const APP_CONFIG = {
+    sheets: {
+        harga: { gid: "216173443", name: "Harga" },
+        runningText: { gid: "1779766141", name: "RunningText" },
+        iklan: { gid: "1303897065", name: "Iklan" }
     },
-    runningText: {
-      data: null,
-      lastFetch: 0,
-      expiration: 10 * 60 * 1000 // 10 menit
+    api: {
+        baseUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZ4Jrb5j2IVmK72GbEhHoyIzck-H-khwypavvFpGD8yxetAErp-YpE6Krtu8OtuOTMYzUozy-CrAy5/pub"
     },
-    iklan: {
-      data: null,
-      lastFetch: 0,
-      expiration: 5 * 60 * 1000 // 5 menit
+    cache: {
+        harga: { duration: 5 * 60 * 1000 }, // 5 minutes
+        runningText: { duration: 10 * 60 * 1000 }, // 10 minutes
+        iklan: { duration: 5 * 60 * 1000 } // 5 minutes
+    },
+    rotation: {
+        interval: 25000, // 25 seconds
+        types: ["emas", "antam", "archi"]
+    },
+    video: {
+        delayBeforeShow: 3000, // 3 seconds
+        autoplayTimeout: 1000 // 1 second
     }
-  }
 };
 
-// Helper functions
-function formatCurrency(amount) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(amount);
+// ============================================
+// APPLICATION STATE MANAGEMENT
+// ============================================
+class AppState {
+    constructor() {
+        this.tableData = {
+            emas: [],
+            antam: [],
+            archi: []
+        };
+        this.currentTableType = "emas";
+        this.rotationInterval = null;
+        this.adsData = [];
+        this.currentVideoIndex = 0;
+        this.videoPlayed = false;
+        this.isYouTubeAPILoaded = false;
+        this.youtubePlayer = null;
+        this.userInteracted = false;
+        this.autoplayAttempted = false;
+        this.isVideoMuted = true;
+        this.cache = {
+            harga: { data: null, timestamp: 0 },
+            runningText: { data: null, timestamp: 0 },
+            iklan: { data: null, timestamp: 0 }
+        };
+    }
+
+    // Cache Management
+    isCacheValid(type) {
+        const cache = this.cache[type];
+        if (!cache || !cache.data) return false;
+        
+        const now = Date.now();
+        const duration = APP_CONFIG.cache[type].duration;
+        return (now - cache.timestamp) < duration;
+    }
+
+    updateCache(type, data) {
+        this.cache[type] = {
+            data: data,
+            timestamp: Date.now()
+        };
+    }
+
+    getCache(type) {
+        return this.cache[type]?.data || null;
+    }
+
+    // Video Management
+    hasActiveAds() {
+        return this.adsData.some(ad => 
+            ad.status?.toLowerCase() === "active" && 
+            ad.video_url && 
+            this.isValidYouTubeUrl(ad.video_url)
+        );
+    }
+
+    getActiveAds() {
+        return this.adsData.filter(ad => 
+            ad.status?.toLowerCase() === "active" && 
+            ad.video_url && 
+            this.isValidYouTubeUrl(ad.video_url)
+        );
+    }
+
+    isValidYouTubeUrl(url) {
+        if (!url || typeof url !== 'string') return false;
+        const cleanUrl = url.trim();
+        if (!cleanUrl) return false;
+        const youtubePattern = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+/;
+        return youtubePattern.test(cleanUrl);
+    }
+
+    // User Interaction
+    setUserInteracted() {
+        if (!this.userInteracted) {
+            this.userInteracted = true;
+            document.body.classList.add('user-interacted');
+            console.log('User interaction detected - enabling video autoplay');
+        }
+    }
 }
 
-// Helper: Cek apakah cache masih valid
-function isCacheValid(cacheType) {
-  const cache = appState.cache[cacheType];
-  if (!cache || !cache.data) return false;
-  
-  const now = Date.now();
-  const timeSinceLastFetch = now - cache.lastFetch;
-  
-  return timeSinceLastFetch < cache.expiration;
-}
+// Initialize global app state
+const app = new AppState();
 
-// Helper: Update cache
-function updateCache(cacheType, data) {
-  appState.cache[cacheType] = {
-    data: data,
-    lastFetch: Date.now(),
-    expiration: appState.cache[cacheType].expiration
-  };
-}
-
-// Inisialisasi aplikasi
-document.addEventListener("DOMContentLoaded", function () {
-  console.log("Memuat aplikasi harga emas...");
-
-  // Setup event listeners untuk interaksi pengguna
-  setupUserInteractionListeners();
-
-  // Setup navigation
-  document.querySelector(".left-nav").addEventListener("click", () => {
-    handleUserInteraction();
-    navigateTables("left");
-  });
-  document.querySelector(".right-nav").addEventListener("click", () => {
-    handleUserInteraction();
-    navigateTables("right");
-  });
-
-  // Load data
-  loadPriceData();
-  loadRunningText();
-  loadAdsData();
-
-  // Mulai rotasi
-  startRotationInterval();
-
-  // Load YouTube API
-  loadYouTubeAPI();
-  
-  // Panggil responsive layout handler
-  setTimeout(handleResponsiveLayout, 100);
+// ============================================
+// DOM ELEMENTS & INITIALIZATION
+// ============================================
+document.addEventListener("DOMContentLoaded", function() {
+    console.log('💰 Pantes CitiMall - Harga Emas Real-time');
+    console.log('🚀 Initializing application...');
+    
+    // Initialize all components
+    initializeApplication();
 });
 
-// Setup listeners untuk interaksi pengguna
-function setupUserInteractionListeners() {
-  const interactionEvents = ["click", "touchstart", "keydown", "scroll"];
+function initializeApplication() {
+    try {
+        // Setup UI event listeners
+        setupEventListeners();
+        
+        // Setup navigation controls
+        setupNavigation();
+        
+        // Load initial data
+        loadAllData();
+        
+        // Start table rotation
+        startTableRotation();
+        
+        // Load YouTube API
+        loadYouTubeAPI();
+        
+        // Setup responsive layout
+        handleResponsiveLayout();
+        
+        // Setup periodic refresh
+        setTimeout(startPeriodicRefresh, 10000);
+        
+        console.log('✅ Application initialized successfully');
+    } catch (error) {
+        console.error('❌ Application initialization failed:', error);
+        showErrorMessage('Gagal menginisialisasi aplikasi. Silakan refresh halaman.');
+    }
+}
 
-  interactionEvents.forEach((eventType) => {
-    document.addEventListener(eventType, handleUserInteraction, {
-      once: false,
-      passive: true,
+function setupEventListeners() {
+    // User interaction detection
+    const interactionEvents = ['click', 'touchstart', 'keydown', 'scroll'];
+    interactionEvents.forEach(event => {
+        document.addEventListener(event, handleUserInteraction, { 
+            passive: true, 
+            once: false 
+        });
     });
-  });
+
+    // Responsive layout
+    window.addEventListener('resize', debounce(handleResponsiveLayout, 250));
+    window.addEventListener('orientationchange', handleResponsiveLayout);
+
+    // Video controls
+    document.getElementById('muteBtn')?.addEventListener('click', toggleVideoMute);
+    document.getElementById('skipBtn')?.addEventListener('click', playNextVideo);
+    document.getElementById('closeVideoBtn')?.addEventListener('click', hideVideo);
+    document.getElementById('menuToggle')?.addEventListener('click', toggleMobileMenu);
 }
 
-function handleUserInteraction() {
-  if (!appState.userInteracted) {
-    console.log("Interaksi pengguna terdeteksi - autoplay diizinkan");
-    appState.userInteracted = true;
+function setupNavigation() {
+    document.querySelector('.prev-btn').addEventListener('click', () => {
+        app.setUserInteracted();
+        navigateTables('left');
+    });
     
-    // Update status user interaction untuk video
-    document.body.classList.add('user-interacted');
-    
-    // Coba unmute dan play video jika sedang ditampilkan
-    if (appState.youtubePlayer && 
-        document.getElementById("videoContainer").classList.contains("active")) {
-      setTimeout(() => {
-        playVideoWithSound();
-      }, 500);
+    document.querySelector('.next-btn').addEventListener('click', () => {
+        app.setUserInteracted();
+        navigateTables('right');
+    });
+}
+
+// ============================================
+// DATA LOADING & MANAGEMENT
+// ============================================
+async function loadAllData() {
+    try {
+        console.log('📥 Loading all data...');
+        
+        // Load data in parallel
+        await Promise.all([
+            loadPriceData(),
+            loadRunningText(),
+            loadAdsData()
+        ]);
+        
+        console.log('✅ All data loaded successfully');
+    } catch (error) {
+        console.error('❌ Failed to load data:', error);
     }
-  }
 }
 
-// Load YouTube API
-function loadYouTubeAPI() {
-  if (!appState.isYouTubeAPILoaded) {
-    const tag = document.createElement("script");
-    tag.src = "https://www.youtube.com/iframe_api";
-    const firstScriptTag = document.getElementsByTagName("script")[0];
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-    appState.isYouTubeAPILoaded = true;
-  }
+async function loadPriceData() {
+    try {
+        console.log('📊 Loading price data...');
+        
+        // Check cache first
+        if (app.isCacheValid('harga')) {
+            console.log('📦 Using cached price data');
+            const cachedData = app.getCache('harga');
+            processPriceData(cachedData);
+            return;
+        }
+        
+        // Fetch from API
+        const url = `${APP_CONFIG.api.baseUrl}?gid=${APP_CONFIG.sheets.harga.gid}&single=true&output=csv`;
+        const response = await fetchWithTimeout(url, 10000);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const csvText = await response.text();
+        const data = parseCSVToJSON(csvText);
+        
+        // Update cache
+        app.updateCache('harga', data);
+        
+        // Process data
+        processPriceData(data);
+        
+        console.log(`✅ Price data loaded: ${data.length} entries`);
+    } catch (error) {
+        console.error('❌ Failed to load price data:', error);
+        
+        // Try to use expired cache as fallback
+        const cachedData = app.getCache('harga');
+        if (cachedData) {
+            console.log('⚠️ Using expired cache as fallback');
+            processPriceData(cachedData);
+        } else {
+            showErrorState('priceTableLeft', 'Gagal memuat data harga');
+            showErrorState('priceTableRight', 'Gagal memuat data harga');
+        }
+    }
 }
 
-// Mulai rotasi tabel
-function startRotationInterval() {
-  if (appState.rotationInterval) clearInterval(appState.rotationInterval);
-
-  appState.rotationInterval = setInterval(() => {
-    navigateTables("right");
-  }, 25000);
+function processPriceData(data) {
+    if (!Array.isArray(data) || data.length === 0) {
+        showNoDataState();
+        return;
+    }
+    
+    // Filter data by type
+    app.tableData.emas = data.filter(row => 
+        row.tipe?.toLowerCase() === "emas"
+    );
+    app.tableData.antam = data.filter(row => 
+        row.tipe?.toLowerCase() === "antam"
+    );
+    app.tableData.archi = data.filter(row => 
+        row.tipe?.toLowerCase() === "archi"
+    );
+    
+    console.log(`📊 Processed: Emas(${app.tableData.emas.length}), Antam(${app.tableData.antam.length}), Archi(${app.tableData.archi.length})`);
+    
+    // Display current table
+    displayTables(app.currentTableType);
+    
+    // Update responsive layout
+    setTimeout(handleResponsiveLayout, 100);
 }
 
-// Navigasi tabel
-function navigateTables(direction) {
-  const types = ["emas", "antam", "archi"];
-  const currentIndex = types.indexOf(appState.currentTableType);
-  let nextIndex;
-
-  if (direction === "right") {
-    nextIndex = (currentIndex + 1) % types.length;
-  } else {
-    nextIndex = (currentIndex - 1 + types.length) % types.length;
-  }
-
-  appState.currentTableType = types[nextIndex];
-  displayTables(appState.currentTableType);
-
-  // Tampilkan video jika tipe archi dan ada iklan aktif
-  if (
-    appState.currentTableType === "archi" &&
-    hasActiveAds() &&
-    !appState.videoPlayed
-  ) {
-    showVideoAfterDelay();
-  }
+async function loadRunningText() {
+    try {
+        console.log('📜 Loading running text...');
+        
+        if (app.isCacheValid('runningText')) {
+            console.log('📦 Using cached running text');
+            const cachedData = app.getCache('runningText');
+            updateRunningText(cachedData);
+            return;
+        }
+        
+        const url = `${APP_CONFIG.api.baseUrl}?gid=${APP_CONFIG.sheets.runningText.gid}&single=true&output=csv`;
+        const response = await fetchWithTimeout(url, 5000);
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const csvText = await response.text();
+        const data = parseRunningTextCSV(csvText);
+        
+        app.updateCache('runningText', data);
+        updateRunningText(data);
+        
+        console.log('✅ Running text loaded');
+    } catch (error) {
+        console.error('❌ Failed to load running text:', error);
+        const cachedData = app.getCache('runningText');
+        if (cachedData) {
+            updateRunningText(cachedData);
+        } else {
+            document.getElementById('marqueeText').textContent = 
+                "Harga emas terkini - Informasi terupdate setiap hari";
+        }
+    }
 }
 
-// Cek apakah ada iklan aktif
-function hasActiveAds() {
-  return (
-    appState.adsData.filter(
-      (ad) =>
-        ad.status &&
-        ad.status.toLowerCase() === "active" &&
-        ad.video_url &&
-        isValidYouTubeUrl(ad.video_url)
-    ).length > 0
-  );
+async function loadAdsData() {
+    try {
+        console.log('🎬 Loading ads data...');
+        
+        if (app.isCacheValid('iklan')) {
+            console.log('📦 Using cached ads data');
+            app.adsData = app.getCache('iklan') || [];
+            return;
+        }
+        
+        const url = `${APP_CONFIG.api.baseUrl}?gid=${APP_CONFIG.sheets.iklan.gid}&single=true&output=csv`;
+        const response = await fetchWithTimeout(url, 5000);
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const csvText = await response.text();
+        const data = parseAdsCSV(csvText);
+        
+        app.updateCache('iklan', data);
+        app.adsData = data;
+        
+        console.log(`✅ Ads data loaded: ${data.length} active ads`);
+    } catch (error) {
+        console.error('❌ Failed to load ads data:', error);
+        const cachedData = app.getCache('iklan');
+        if (cachedData) {
+            app.adsData = cachedData;
+        }
+    }
 }
 
-// Validasi URL YouTube
-function isValidYouTubeUrl(url) {
-  if (!url) return false;
-  const cleanUrl = url.trim();
-  if (!cleanUrl) return false;
-
-  const youtubePattern = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+/;
-  return youtubePattern.test(cleanUrl);
+// ============================================
+// UI COMPONENTS & DISPLAY
+// ============================================
+function displayTables(type) {
+    const data = app.tableData[type];
+    
+    if (!data || data.length === 0) {
+        showNoDataState();
+        return;
+    }
+    
+    // Update table titles
+    updateTableTitles(type);
+    
+    // Split data for two tables
+    const half = Math.ceil(data.length / 2);
+    const leftData = data.slice(0, half);
+    const rightData = data.slice(half);
+    
+    // Update both tables
+    updateTable('priceTableLeft', leftData);
+    updateTable('priceTableRight', rightData);
 }
 
-// Tampilkan video setelah delay
-function showVideoAfterDelay() {
-  setTimeout(() => {
-    showVideo();
-  }, 3000);
+function updateTableTitles(type) {
+    const titles = {
+        emas: 'Harga Emas',
+        antam: 'Harga Antam', 
+        archi: 'Harga Archi'
+    };
+    
+    document.querySelectorAll('.table-title').forEach(title => {
+        title.textContent = titles[type] || 'Harga Emas';
+    });
 }
 
-// Tampilkan video
+function updateTable(elementId, data) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    if (!data || data.length === 0) {
+        element.innerHTML = createNoDataHTML();
+        return;
+    }
+    
+    element.innerHTML = createTableHTML(data);
+}
+
+function createTableHTML(data) {
+    return `
+        <table class="price-table">
+            <thead>
+                <tr>
+                    <th>Kode</th>
+                    <th>Harga Jual</th>
+                    <th>Buyback</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.map(item => `
+                    <tr>
+                        <td class="code-cell">${escapeHTML(item.kode || '-')}</td>
+                        <td class="highlight">${formatCurrency(item.harga_jual)}</td>
+                        <td class="highlight">${formatCurrency(item.buyback)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function updateRunningText(data) {
+    const marqueeElement = document.getElementById('marqueeText');
+    if (!marqueeElement) return;
+    
+    if (!data || !Array.isArray(data) || data.length === 0) {
+        marqueeElement.textContent = "Harga emas terkini - Informasi terupdate setiap hari";
+        return;
+    }
+    
+    const texts = data
+        .map(item => item.teks?.trim())
+        .filter(text => text && text.length > 0);
+    
+    if (texts.length === 0) {
+        marqueeElement.textContent = "Harga emas terkini - Informasi terupdate setiap hari";
+        return;
+    }
+    
+    const combinedText = texts.join(' • ');
+    marqueeElement.textContent = combinedText;
+    
+    // Adjust animation speed based on text length
+    adjustTickerSpeed(combinedText.length);
+}
+
+// ============================================
+// VIDEO PLAYER MANAGEMENT
+// ============================================
 function showVideo() {
-  const activeAds = appState.adsData.filter(
-    (ad) =>
-      ad.status &&
-      ad.status.toLowerCase() === "active" &&
-      ad.video_url &&
-      isValidYouTubeUrl(ad.video_url)
-  );
-
-  if (activeAds.length === 0) {
-    console.log("Tidak ada iklan aktif");
-    appState.videoPlayed = true;
-    return;
-  }
-
-  if (appState.currentVideoIndex >= activeAds.length) {
-    appState.currentVideoIndex = 0;
-  }
-
-  const selectedAd = activeAds[appState.currentVideoIndex];
-  const videoContainer = document.getElementById("videoContainer");
-  const videoWrapper = document.querySelector(".video-wrapper");
-
-  console.log(`Menampilkan video: ${appState.currentVideoIndex + 1} dari ${activeAds.length}`);
-
-  document.getElementById("tableEmas").style.display = "none";
-  document.getElementById("tableAntam").style.display = "none";
-
-  videoWrapper.innerHTML = "";
-
-  const videoContainerDiv = document.createElement("div");
-  videoContainerDiv.id = "player";
-  videoContainerDiv.style.width = "100%";
-  videoContainerDiv.style.height = "100%";
-  videoContainerDiv.style.position = "absolute";
-  videoContainerDiv.style.top = "0";
-  videoContainerDiv.style.left = "0";
-
-  videoWrapper.appendChild(videoContainerDiv);
-
-  videoContainer.classList.add("active");
-  appState.videoPlayed = true;
-
-  setTimeout(() => {
-    setupYouTubePlayer(selectedAd.video_url);
-  }, 500);
+    const activeAds = app.getActiveAds();
+    if (activeAds.length === 0) {
+        console.log('No active ads available');
+        app.videoPlayed = true;
+        return;
+    }
+    
+    // Reset index if out of bounds
+    if (app.currentVideoIndex >= activeAds.length) {
+        app.currentVideoIndex = 0;
+    }
+    
+    const selectedAd = activeAds[app.currentVideoIndex];
+    const videoContainer = document.getElementById('videoContainer');
+    const videoWrapper = document.querySelector('.video-player-wrapper');
+    
+    console.log(`🎥 Showing video ${app.currentVideoIndex + 1}/${activeAds.length}`);
+    
+    // Hide tables
+    document.querySelectorAll('.price-table-card').forEach(card => {
+        card.style.display = 'none';
+    });
+    
+    // Clear and setup video container
+    videoWrapper.innerHTML = '';
+    
+    const videoDiv = document.createElement('div');
+    videoDiv.id = 'player';
+    videoDiv.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    `;
+    
+    videoWrapper.appendChild(videoDiv);
+    
+    // Show video container
+    videoContainer.classList.add('active');
+    app.videoPlayed = true;
+    
+    // Setup YouTube player after a short delay
+    setTimeout(() => {
+        setupYouTubePlayer(selectedAd.video_url);
+    }, 500);
 }
 
-// Setup YouTube Player dengan strategi autoplay yang lebih baik
 function setupYouTubePlayer(videoUrl) {
-  const videoId = extractVideoId(videoUrl);
-
-  if (!videoId) {
-    console.error("Tidak dapat mengekstrak Video ID dari URL:", videoUrl);
-    showVideoFallback();
-    return;
-  }
-
-  appState.autoplayAttempted = false;
-  appState.isVideoMuted = true;
-
-  // Gunakan muted autoplay dulu, baru unmute setelah interaksi
-  appState.youtubePlayer = new YT.Player("player", {
-    height: "100%",
-    width: "100%",
-    videoId: videoId,
-    playerVars: {
-      autoplay: 1,
-      mute: 1,
-      enablejsapi: 1,
-      rel: 0,
-      playsinline: 1,
-      controls: 1,
-      modestbranding: 1,
-      showinfo: 0,
-      iv_load_policy: 3,
-    },
-    events: {
-      onReady: onPlayerReady,
-      onStateChange: onPlayerStateChange,
-      onError: onPlayerError,
-    },
-  });
+    const videoId = extractYouTubeId(videoUrl);
+    
+    if (!videoId) {
+        console.error('Invalid YouTube URL:', videoUrl);
+        showVideoError();
+        return;
+    }
+    
+    app.autoplayAttempted = false;
+    app.isVideoMuted = true;
+    
+    // Create YouTube player with optimal settings
+    app.youtubePlayer = new YT.Player('player', {
+        width: '100%',
+        height: '100%',
+        videoId: videoId,
+        playerVars: {
+            autoplay: 1,
+            mute: 1,
+            enablejsapi: 1,
+            rel: 0,
+            playsinline: 1,
+            controls: 1,
+            modestbranding: 1,
+            showinfo: 0,
+            iv_load_policy: 3
+        },
+        events: {
+            onReady: onPlayerReady,
+            onStateChange: onPlayerStateChange,
+            onError: onPlayerError
+        }
+    });
 }
 
-// Ekstrak Video ID dari URL YouTube
-function extractVideoId(url) {
-  const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-  const match = url.match(regExp);
-  return match && match[7].length === 11 ? match[7] : null;
-}
-
-// YouTube Player Callbacks
 function onPlayerReady(event) {
-  console.log("YouTube Player siap, mencoba autoplay...");
-  
-  // Coba play dengan strategi bertahap
-  attemptSmartAutoplay(event.target);
-}
-
-function attemptSmartAutoplay(player) {
-  if (appState.autoplayAttempted) return;
-  appState.autoplayAttempted = true;
-
-  console.log("Status interaksi user:", appState.userInteracted);
-  
-  // Strategi 1: Jika user sudah interaksi, langsung play dengan suara
-  if (appState.userInteracted) {
-    console.log("User sudah interaksi, mencoba play dengan suara...");
-    try {
-      player.unMute();
-      player.playVideo();
-      appState.isVideoMuted = false;
-      console.log("Video diputar dengan suara setelah interaksi");
-      return;
-    } catch (error) {
-      console.log("Gagal play dengan suara:", error);
-    }
-  }
-  
-  // Strategi 2: Muted autoplay (biasanya diizinkan browser)
-  console.log("Mencoba muted autoplay...");
-  try {
-    player.mute();
-    player.playVideo();
-    appState.isVideoMuted = true;
-    console.log("Muted autoplay berhasil");
-    
-    // Tampilkan tombol untuk unmute
-    showUnmuteButton(player);
-    
-  } catch (error) {
-    console.log("Muted autoplay juga diblokir:", error);
-    
-    // Strategi 3: Tampilkan tombol play interaktif
-    showInteractivePlayButton(player);
-  }
-}
-
-function playVideoWithSound() {
-  if (appState.youtubePlayer && appState.youtubePlayer.playVideo) {
-    try {
-      // Pastikan unmute dulu
-      if (appState.isVideoMuted) {
-        appState.youtubePlayer.unMute();
-        appState.isVideoMuted = false;
-        console.log("Video di-unmute");
-      }
-      
-      // Coba play jika belum playing
-      if (appState.youtubePlayer.getPlayerState() !== YT.PlayerState.PLAYING) {
-        appState.youtubePlayer.playVideo();
-        console.log("Video diputar dengan suara");
-      }
-      
-      // Sembunyikan tombol unmute jika ada
-      const unmuteBtn = document.querySelector(".unmute-btn");
-      if (unmuteBtn) {
-        unmuteBtn.style.display = "none";
-      }
-      
-    } catch (error) {
-      console.log("Gagal memutar video dengan suara:", error);
-    }
-  }
+    console.log('✅ YouTube Player ready');
+    attemptSmartAutoplay(event.target);
 }
 
 function onPlayerStateChange(event) {
-  console.log("Status Player berubah:", event.data);
-
-  if (event.data === YT.PlayerState.ENDED) {
-    console.log("Video selesai, melanjutkan ke video berikutnya...");
-    playNextVideo();
-  }
-
-  // Unmute otomatis saat video mulai diputar
-  if (event.data === YT.PlayerState.PLAYING && appState.userInteracted && appState.isVideoMuted) {
-    setTimeout(() => {
-      try {
-        event.target.unMute();
-        appState.isVideoMuted = false;
-        console.log("Video di-unmute otomatis saat playing");
-        
-        // Sembunyikan tombol unmute
-        const unmuteBtn = document.querySelector(".unmute-btn");
-        if (unmuteBtn) {
-          unmuteBtn.style.display = "none";
-        }
-      } catch (error) {
-        console.log("Tidak bisa unmute:", error);
-      }
-    }, 1000);
-  }
+    const states = {
+        '-1': 'UNSTARTED',
+        '0': 'ENDED',
+        '1': 'PLAYING',
+        '2': 'PAUSED',
+        '3': 'BUFFERING',
+        '5': 'CUED'
+    };
+    
+    console.log(`🎬 Player state: ${states[event.data] || event.data}`);
+    
+    if (event.data === YT.PlayerState.ENDED) {
+        console.log('Video ended, playing next...');
+        playNextVideo();
+    }
+    
+    if (event.data === YT.PlayerState.PLAYING && app.userInteracted && app.isVideoMuted) {
+        setTimeout(() => {
+            try {
+                event.target.unMute();
+                app.isVideoMuted = false;
+                console.log('🔊 Video unmuted automatically');
+                
+                // Update mute button
+                const muteBtn = document.getElementById('muteBtn');
+                if (muteBtn) {
+                    muteBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                }
+            } catch (error) {
+                console.log('Cannot unmute:', error);
+            }
+        }, 1000);
+    }
 }
 
 function onPlayerError(event) {
-  console.error("Error YouTube Player:", event.data);
-  showVideoFallback();
+    console.error('❌ YouTube Player error:', event.data);
+    showVideoError();
 }
 
-// Tampilkan tombol unmute untuk muted video
-function showUnmuteButton(player) {
-  const videoWrapper = document.querySelector(".video-wrapper");
-  
-  // Hapus tombol yang sudah ada
-  const existingBtn = videoWrapper.querySelector(".unmute-btn");
-  if (existingBtn) existingBtn.remove();
-
-  const unmuteBtn = document.createElement("button");
-  unmuteBtn.className = "unmute-btn";
-  unmuteBtn.innerHTML = `
-    <i class="fas fa-volume-mute" style="margin-right: 8px;"></i>
-    Klik untuk Menyalakan Suara
-  `;
-
-  unmuteBtn.onclick = function () {
-    handleUserInteraction();
-    playVideoWithSound();
-  };
-
-  videoWrapper.appendChild(unmuteBtn);
-}
-
-// Tampilkan tombol play interaktif
-function showInteractivePlayButton(player) {
-  const videoWrapper = document.querySelector(".video-wrapper");
-
-  const existingBtn = videoWrapper.querySelector(".play-btn");
-  if (existingBtn) existingBtn.remove();
-
-  const playBtn = document.createElement("button");
-  playBtn.className = "play-btn";
-  playBtn.innerHTML = `
-    <i class="fas fa-play" style="margin-right: 8px;"></i>
-    Klik untuk Memutar Video
-  `;
-
-  playBtn.onclick = function () {
-    handleUserInteraction();
-    playVideoWithSound();
-  };
-
-  // Tambahkan instruksi
-  const instruction = document.createElement("div");
-  instruction.className = "play-instruction";
-  instruction.innerHTML = "Browser memerlukan interaksi untuk memutar video";
-
-  videoWrapper.appendChild(playBtn);
-  videoWrapper.appendChild(instruction);
-}
-
-// Fallback jika video error
-function showVideoFallback() {
-  console.log("Menampilkan fallback untuk video yang error");
-  const videoWrapper = document.querySelector(".video-wrapper");
-  
-  videoWrapper.innerHTML = `
-    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; color: white; background: rgba(0,0,0,0.7); border-radius: 8px;">
-      <i class="fas fa-video-slash" style="font-size: 48px; margin-bottom: 20px;"></i>
-      <h3>Video Tidak Dapat Diputar</h3>
-      <p>Video iklan sedang tidak tersedia</p>
-      <button onclick="hideVideo()" style="margin-top: 20px; padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer;">
-        Lanjutkan Ke Harga Emas
-      </button>
-    </div>
-  `;
-}
-
-// Putar video berikutnya
-function playNextVideo() {
-  console.log("Memainkan video berikutnya...");
-
-  appState.currentVideoIndex++;
-
-  const activeAds = appState.adsData.filter(
-    (ad) =>
-      ad.status &&
-      ad.status.toLowerCase() === "active" &&
-      ad.video_url &&
-      isValidYouTubeUrl(ad.video_url)
-  );
-
-  if (appState.currentVideoIndex < activeAds.length) {
-    showVideo();
-  } else {
-    appState.currentVideoIndex = 0;
-    hideVideo();
-  }
-}
-
-// Sembunyikan video
-function hideVideo() {
-  const videoContainer = document.getElementById("videoContainer");
-  const videoWrapper = document.querySelector(".video-wrapper");
-
-  console.log("Menyembunyikan video");
-
-  if (appState.youtubePlayer) {
-    try {
-      appState.youtubePlayer.stopVideo();
-      appState.youtubePlayer.destroy();
-    } catch (error) {
-      console.log("Tidak dapat menghentikan video:", error);
-    }
-    appState.youtubePlayer = null;
-  }
-
-  appState.videoPlayed = false;
-  appState.autoplayAttempted = false;
-  appState.isVideoMuted = true;
-
-  videoWrapper.innerHTML = "";
-  videoContainer.classList.remove("active");
-
-  document.getElementById("tableEmas").style.display = "block";
-  document.getElementById("tableAntam").style.display = "block";
-}
-
-// Load data harga dengan caching
-async function loadPriceData() {
-  try {
-    console.log("Memuat data harga...");
+function attemptSmartAutoplay(player) {
+    if (app.autoplayAttempted) return;
+    app.autoplayAttempted = true;
     
-    if (isCacheValid('harga')) {
-      console.log("Menggunakan data harga dari cache");
-      const cachedData = appState.cache.harga.data;
-      
-      appState.tableData.emas = cachedData.filter(
-        (row) => row.tipe && row.tipe.toLowerCase() === "emas"
-      );
-      appState.tableData.antam = cachedData.filter(
-        (row) => row.tipe && row.tipe.toLowerCase() === "antam"
-      );
-      appState.tableData.archi = cachedData.filter(
-        (row) => row.tipe && row.tipe.toLowerCase() === "archi"
-      );
-
-      console.log(`Data loaded from cache - Emas: ${appState.tableData.emas.length}, Antam: ${appState.tableData.antam.length}, Archi: ${appState.tableData.archi.length}`);
-      displayTables("emas");
-      
-      // Setelah data dimuat, update layout
-      setTimeout(handleResponsiveLayout, 50);
-      return;
-    }
-    
-    const url = `${SHEET_BASE_URL}?gid=${SHEET_CONFIG.harga.gid}&single=true&output=csv`;
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const csvText = await response.text();
-    const data = parseCSVToJSON(csvText);
-    
-    updateCache('harga', data);
-    
-    appState.tableData.emas = data.filter(
-      (row) => row.tipe && row.tipe.toLowerCase() === "emas"
-    );
-    appState.tableData.antam = data.filter(
-      (row) => row.tipe && row.tipe.toLowerCase() === "antam"
-    );
-    appState.tableData.archi = data.filter(
-      (row) => row.tipe && row.tipe.toLowerCase() === "archi"
-    );
-
-    console.log(`Data loaded from API - Emas: ${appState.tableData.emas.length}, Antam: ${appState.tableData.antam.length}, Archi: ${appState.tableData.archi.length}`);
-    displayTables("emas");
-    
-    // Setelah data dimuat, update layout
-    setTimeout(handleResponsiveLayout, 50);
-  } catch (error) {
-    console.error("Error loading CSV data:", error);
-    
-    if (appState.cache.harga.data) {
-      console.log("Menggunakan data cache yang kadaluwarsa sebagai fallback");
-      const cachedData = appState.cache.harga.data;
-      
-      appState.tableData.emas = cachedData.filter(
-        (row) => row.tipe && row.tipe.toLowerCase() === "emas"
-      );
-      appState.tableData.antam = cachedData.filter(
-        (row) => row.tipe && row.tipe.toLowerCase() === "antam"
-      );
-      appState.tableData.archi = cachedData.filter(
-        (row) => row.tipe && row.tipe.toLowerCase() === "archi"
-      );
-      
-      displayTables("emas");
-    } else {
-      showError();
-    }
-    
-    // Tetap update layout meskipun error
-    setTimeout(handleResponsiveLayout, 50);
-  }
-}
-
-// Load running text dengan caching
-async function loadRunningText() {
-  try {
-    console.log("Memuat running text...");
-    
-    if (isCacheValid('runningText')) {
-      console.log("Menggunakan running text dari cache");
-      const cachedData = appState.cache.runningText.data;
-      processRunningTextData(cachedData);
-      return;
-    }
-    
-    const url = `${SHEET_BASE_URL}?gid=${SHEET_CONFIG.runningText.gid}&single=true&output=csv`;
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const csvText = await response.text();
-    const data = parseRunningTextCSV(csvText);
-    
-    updateCache('runningText', data);
-    
-    processRunningTextData(data);
-  } catch (error) {
-    console.error("Error loading running text:", error);
-    
-    if (appState.cache.runningText.data) {
-      console.log("Menggunakan running text cache sebagai fallback");
-      processRunningTextData(appState.cache.runningText.data);
-    } else {
-      document.getElementById("marqueeText").textContent =
-        "Harga emas terkini - Informasi terupdate setiap hari";
-    }
-  }
-}
-
-// Load data iklan dengan caching
-async function loadAdsData() {
-  try {
-    console.log("Memuat data iklan...");
-    
-    if (isCacheValid('iklan')) {
-      console.log("Menggunakan data iklan dari cache");
-      appState.adsData = appState.cache.iklan.data;
-      console.log("Ads data loaded from cache:", appState.adsData.length, "iklan");
-      return;
-    }
-    
-    const url = `${SHEET_BASE_URL}?gid=${SHEET_CONFIG.iklan.gid}&single=true&output=csv`;
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const csvText = await response.text();
-    const data = parseAdsCSV(csvText);
-    
-    updateCache('iklan', data);
-    
-    appState.adsData = data;
-    console.log("Ads data loaded from API:", appState.adsData.length, "iklan");
-  } catch (error) {
-    console.error("Error loading ads data:", error);
-    
-    if (appState.cache.iklan.data) {
-      console.log("Menggunakan data iklan cache sebagai fallback");
-      appState.adsData = appState.cache.iklan.data;
-    }
-  }
-}
-
-// Parser untuk data iklan
-function parseAdsCSV(csvText) {
-  const lines = csvText.trim().split("\n");
-
-  if (lines.length < 1) return [];
-
-  if (lines.length === 1) {
-    const values = lines[0].split(",").map((v) => v.trim());
-    if (values.length >= 7) {
-      return [
-        {
-          judul: values[0],
-          deskripsi: values[1],
-          video_url: values[2],
-          gambar_url: values[3],
-          link1: values[4],
-          link2: values[5],
-          status: values[6],
-        },
-      ];
-    }
-    return [];
-  }
-
-  const headers = lines[0]
-    .split(",")
-    .map((h) => h.toLowerCase().trim().replace(/\s+/g, "_"));
-
-  return lines
-    .slice(1)
-    .map((line) => {
-      const values = line.split(",").map((v) => v.trim());
-      const obj = {};
-
-      headers.forEach((header, index) => {
-        if (index < values.length) {
-          obj[header] = values[index];
+    if (app.userInteracted) {
+        // User has interacted, try unmuted autoplay
+        console.log('👤 User interacted, attempting unmuted autoplay...');
+        try {
+            player.unMute();
+            player.playVideo();
+            app.isVideoMuted = false;
+            console.log('✅ Unmuted autoplay successful');
+        } catch (error) {
+            console.log('❌ Unmuted autoplay failed:', error);
+            showInteractivePlayButton();
         }
-      });
-
-      return obj;
-    })
-    .filter(
-      (ad) =>
-        ad.video_url &&
-        ad.video_url.trim() !== "" &&
-        ad.status &&
-        ad.status.toLowerCase() === "active"
-    );
-}
-
-// Parser untuk running text
-function parseRunningTextCSV(csvText) {
-  const lines = csvText.trim().split("\n");
-
-  if (lines.length < 1) return [];
-
-  if (lines.length === 1) {
-    return [{ teks: lines[0].trim() }];
-  }
-
-  const headers = lines[0]
-    .split(",")
-    .map((h) => h.toLowerCase().trim().replace(/\s+/g, "_"));
-
-  const textColumn =
-    headers.find(
-      (h) =>
-        h.includes("teks") ||
-        h.includes("text") ||
-        h.includes("isi") ||
-        h.includes("running")
-    ) || headers[0];
-
-  return lines
-    .slice(1)
-    .map((line) => {
-      const values = line.split(",").map((v) => v.trim());
-
-      if (values.length === 1) {
-        return { teks: values[0] };
-      }
-
-      const textIndex = headers.indexOf(textColumn);
-      const teks =
-        textIndex >= 0 && textIndex < values.length
-          ? values[textIndex]
-          : values.join(" ");
-
-      return { teks };
-    })
-    .filter((item) => item.teks && item.teks.trim() !== "");
-}
-
-// Proses data running text
-function processRunningTextData(data) {
-  if (!data || data.length === 0) {
-    document.getElementById("marqueeText").textContent =
-      "Harga emas terkini - Informasi terupdate setiap hari";
-    return;
-  }
-
-  const runningTexts = data
-    .map((item) => item.teks)
-    .filter((teks) => teks && teks.trim() !== "");
-
-  if (runningTexts.length === 0) {
-    document.getElementById("marqueeText").textContent =
-      "Harga emas terkini - Informasi terupdate setiap hari";
-    return;
-  }
-
-  const marqueeContent = runningTexts.join(" | ");
-  const marqueeElement = document.getElementById("marqueeText");
-  marqueeElement.textContent = marqueeContent;
-
-  adjustMarqueeSpeed(marqueeContent.length);
-}
-
-// Sesuaikan kecepatan marquee
-function adjustMarqueeSpeed(textLength) {
-  const marqueeElement = document.getElementById("marqueeText");
-  const baseDuration = 60;
-  const duration = Math.max(baseDuration, textLength / 10);
-
-  marqueeElement.style.animation = "none";
-
-  setTimeout(() => {
-    marqueeElement.style.animation = `marquee ${duration}s linear infinite`;
-  }, 10);
-}
-
-// Parser CSV ke JSON
-function parseCSVToJSON(csvText) {
-  const lines = csvText.trim().split("\n");
-  if (lines.length < 2) return [];
-
-  const headers = lines[0]
-    .split(",")
-    .map((h) => h.toLowerCase().replace(/\s+/g, "_"));
-  return lines.slice(1).map((line) => {
-    const values = line.split(",").map((v) => v.trim());
-    const obj = {};
-    headers.forEach((header, index) => {
-      let value = values[index] || "";
-      if (["harga_jual", "buyback"].includes(header)) {
-        value = parseInt(value.replace(/[^0-9]/g, ""), 10) || 0;
-      }
-      obj[header] = value;
-    });
-    return obj;
-  });
-}
-
-// Tampilkan tabel
-function displayTables(type) {
-  const data = appState.tableData[type];
-  if (!data || data.length === 0) {
-    showError();
-    return;
-  }
-
-  updateTableTitles(type);
-
-  const half = Math.ceil(data.length / 2);
-  const leftData = data.slice(0, half);
-  const rightData = data.slice(half);
-
-  updateTable("priceTableLeft", leftData, type);
-  updateTable("priceTableRight", rightData, type);
-}
-
-// Update judul tabel
-function updateTableTitles(type) {
-  const tableTitles = document.querySelectorAll(".table-title");
-
-  if (type === "emas") {
-    tableTitles[0].textContent = "Harga Emas";
-    tableTitles[1].textContent = "Harga Emas";
-  } else if (type === "antam") {
-    tableTitles[0].textContent = "Harga Antam";
-    tableTitles[1].textContent = "Harga Antam";
-  } else if (type === "archi") {
-    tableTitles[0].textContent = "Harga Archi";
-    tableTitles[1].textContent = "Harga Archi";
-  }
-}
-
-// Update tabel
-function updateTable(elementId, data, type) {
-  const tableElement = document.getElementById(elementId);
-
-  if (data.length === 0) {
-    tableElement.innerHTML = '<div class="no-data">Data tidak tersedia</div>';
-    return;
-  }
-
-  let tableHTML = `
-    <table class="price-table">
-      <thead>
-        <tr>
-          <th>Kode</th>
-          <th>Jual</th>
-          <th>Buyback</th>
-        </tr>
-      </thead>
-      <tbody>
-  `;
-
-  data.forEach((item) => {
-    tableHTML += `
-      <tr>
-        <td>${item.kode || "-"}</td>
-        <td class="highlight">${item.harga_jual ? formatCurrency(item.harga_jual) : "-"}</td>
-        <td class="highlight">${item.buyback ? formatCurrency(item.buyback) : "-"}</td>
-      </tr>
-    `;
-  });
-
-  tableHTML += `
-      </tbody>
-    </table>
-  `;
-
-  tableElement.innerHTML = tableHTML;
-}
-
-// Tampilkan error
-function showError() {
-  const errorHTML = `
-    <div class="error-message">
-      <i class="fas fa-exclamation-triangle"></i>
-      <p>Gagal memuat data. Silakan coba lagi.</p>
-    </div>
-  `;
-  document.getElementById("priceTableLeft").innerHTML = errorHTML;
-  document.getElementById("priceTableRight").innerHTML = errorHTML;
-}
-
-// Reset state ketika halaman di-refresh
-window.addEventListener("beforeunload", function () {
-  appState.currentVideoIndex = 0;
-  appState.videoPlayed = false;
-  appState.userInteracted = false;
-  appState.autoplayAttempted = false;
-  appState.isVideoMuted = true;
-});
-
-// Handle visibility change
-document.addEventListener("visibilitychange", function () {
-  if (document.hidden) {
-    if (appState.rotationInterval) clearInterval(appState.rotationInterval);
-  } else {
-    startRotationInterval();
-  }
-});
-
-// Fungsi untuk handle responsive layout
-function handleResponsiveLayout() {
-  const isMobile = window.innerWidth <= 768;
-  const isTablet = window.innerWidth > 768 && window.innerWidth <= 1024;
-  const isTV = window.innerWidth > 1920;
-  
-  // Sesuaikan font size untuk TV besar
-  if (isTV) {
-    document.documentElement.style.fontSize = '18px';
-  } else {
-    document.documentElement.style.fontSize = '';
-  }
-  
-  // Sesuaikan tinggi tabel
-  const tables = document.querySelectorAll('.table-wrapper');
-  const viewportHeight = window.innerHeight;
-  const availableHeight = viewportHeight - 200; // Kurangi header dan footer
-  
-  tables.forEach(table => {
-    if (isMobile) {
-      table.style.minHeight = '300px';
-    } else if (isTablet) {
-      table.style.minHeight = '350px';
     } else {
-      table.style.minHeight = '400px';
+        // Start with muted autoplay (usually allowed)
+        console.log('🔇 Starting with muted autoplay...');
+        try {
+            player.mute();
+            player.playVideo();
+            app.isVideoMuted = true;
+            console.log('✅ Muted autoplay successful');
+            showUnmuteButton();
+        } catch (error) {
+            console.log('❌ Muted autoplay failed:', error);
+            showInteractivePlayButton();
+        }
+    }
+}
+
+function playVideoWithSound() {
+    if (app.youtubePlayer && typeof app.youtubePlayer.playVideo === 'function') {
+        try {
+            if (app.isVideoMuted) {
+                app.youtubePlayer.unMute();
+                app.isVideoMuted = false;
+                console.log('🔊 Video unmuted');
+            }
+            
+            if (app.youtubePlayer.getPlayerState() !== YT.PlayerState.PLAYING) {
+                app.youtubePlayer.playVideo();
+                console.log('▶️ Video playing with sound');
+            }
+            
+            // Hide interactive buttons
+            hideInteractiveButtons();
+            
+        } catch (error) {
+            console.error('❌ Failed to play video with sound:', error);
+        }
+    }
+}
+
+function toggleVideoMute() {
+    if (!app.youtubePlayer) return;
+    
+    try {
+        if (app.isVideoMuted) {
+            app.youtubePlayer.unMute();
+            app.isVideoMuted = false;
+            document.getElementById('muteBtn').innerHTML = '<i class="fas fa-volume-up"></i>';
+            console.log('🔊 Video unmuted');
+        } else {
+            app.youtubePlayer.mute();
+            app.isVideoMuted = true;
+            document.getElementById('muteBtn').innerHTML = '<i class="fas fa-volume-mute"></i>';
+            console.log('🔇 Video muted');
+        }
+    } catch (error) {
+        console.error('❌ Failed to toggle mute:', error);
+    }
+}
+
+function hideVideo() {
+    const videoContainer = document.getElementById('videoContainer');
+    const videoWrapper = document.querySelector('.video-player-wrapper');
+    
+    console.log('👋 Hiding video');
+    
+    // Stop and destroy player
+    if (app.youtubePlayer) {
+        try {
+            app.youtubePlayer.stopVideo();
+            app.youtubePlayer.destroy();
+        } catch (error) {
+            console.log('Error destroying player:', error);
+        }
+        app.youtubePlayer = null;
     }
     
-    // Pastikan tidak melebihi viewport
-    if (table.offsetHeight > availableHeight) {
-      table.style.minHeight = availableHeight + 'px';
+    // Reset video state
+    app.videoPlayed = false;
+    app.autoplayAttempted = false;
+    app.isVideoMuted = true;
+    
+    // Clear container
+    videoWrapper.innerHTML = `
+        <div class="video-placeholder" id="videoPlaceholder">
+            <div class="placeholder-content">
+                <i class="fas fa-play-circle"></i>
+                <p>Video Iklan Akan Ditampilkan di Sini</p>
+            </div>
+        </div>
+    `;
+    
+    // Hide container
+    videoContainer.classList.remove('active');
+    
+    // Show tables
+    document.querySelectorAll('.price-table-card').forEach(card => {
+        card.style.display = 'flex';
+    });
+}
+
+// ============================================
+// UI HELPER FUNCTIONS
+// ============================================
+function showUnmuteButton() {
+    const videoWrapper = document.querySelector('.video-player-wrapper');
+    if (!videoWrapper) return;
+    
+    const existingBtn = videoWrapper.querySelector('.unmute-btn');
+    if (existingBtn) existingBtn.remove();
+    
+    const unmuteBtn = document.createElement('button');
+    unmuteBtn.className = 'unmute-btn';
+    unmuteBtn.innerHTML = `
+        <i class="fas fa-volume-mute"></i>
+        Klik untuk Menyalakan Suara
+    `;
+    unmuteBtn.style.cssText = `
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 6px;
+        cursor: pointer;
+        z-index: 90;
+        font-family: 'Poppins', sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        backdrop-filter: blur(4px);
+    `;
+    
+    unmuteBtn.onclick = function() {
+        app.setUserInteracted();
+        playVideoWithSound();
+    };
+    
+    videoWrapper.appendChild(unmuteBtn);
+}
+
+function showInteractivePlayButton() {
+    const videoWrapper = document.querySelector('.video-player-wrapper');
+    if (!videoWrapper) return;
+    
+    const existingBtn = videoWrapper.querySelector('.interactive-play-btn');
+    if (existingBtn) existingBtn.remove();
+    
+    const playBtn = document.createElement('button');
+    playBtn.className = 'interactive-play-btn';
+    playBtn.innerHTML = `
+        <i class="fas fa-play-circle"></i>
+        Klik untuk Memutar Video
+    `;
+    
+    playBtn.onclick = function() {
+        app.setUserInteracted();
+        playVideoWithSound();
+    };
+    
+    // Add instructions
+    const instruction = document.createElement('div');
+    instruction.className = 'video-instruction';
+    instruction.textContent = 'Browser memerlukan interaksi untuk memutar video';
+    
+    videoWrapper.appendChild(playBtn);
+    videoWrapper.appendChild(instruction);
+}
+
+function hideInteractiveButtons() {
+    const videoWrapper = document.querySelector('.video-player-wrapper');
+    if (!videoWrapper) return;
+    
+    ['unmute-btn', 'interactive-play-btn', 'video-instruction'].forEach(className => {
+        const element = videoWrapper.querySelector(`.${className}`);
+        if (element) element.remove();
+    });
+}
+
+function showVideoError() {
+    const videoWrapper = document.querySelector('.video-player-wrapper');
+    if (!videoWrapper) return;
+    
+    videoWrapper.innerHTML = `
+        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(26, 43, 60, 0.9); color: white; text-align: center; padding: 20px;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 20px; color: #E74C3C;"></i>
+            <h3 style="margin-bottom: 10px; font-size: 20px;">Video Tidak Tersedia</h3>
+            <p style="margin-bottom: 20px; opacity: 0.9;">Video iklan sedang tidak dapat diputar</p>
+            <button onclick="hideVideo()" style="padding: 10px 20px; background: var(--primary-gold); color: white; border: none; border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 600;">
+                <i class="fas fa-arrow-left" style="margin-right: 8px;"></i>
+                Kembali ke Harga Emas
+            </button>
+        </div>
+    `;
+}
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+function formatCurrency(amount) {
+    if (!amount && amount !== 0) return '-';
+    
+    const num = typeof amount === 'string' ? parseInt(amount.replace(/[^0-9]/g, '')) : amount;
+    if (isNaN(num)) return '-';
+    
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(num);
+}
+
+function extractYouTubeId(url) {
+    if (!url) return null;
+    
+    const patterns = [
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+        /^([a-zA-Z0-9_-]{11})$/
+    ];
+    
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match && match[1]) return match[1];
     }
-  });
-  
-  // Sesuaikan marquee speed berdasarkan lebar layar
-  const marqueeText = document.getElementById('marqueeText');
-  if (marqueeText) {
+    
+    return null;
+}
+
+function escapeHTML(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+async function fetchWithTimeout(url, timeout = 10000) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+        const response = await fetch(url, {
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        return response;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
+    }
+}
+
+// ============================================
+// PARSER FUNCTIONS
+// ============================================
+function parseCSVToJSON(csvText) {
+    try {
+        const lines = csvText.trim().split('\n');
+        if (lines.length < 2) return [];
+        
+        const headers = lines[0]
+            .split(',')
+            .map(h => h.toLowerCase().replace(/\s+/g, '_').trim());
+        
+        return lines.slice(1).map(line => {
+            const values = line.split(',').map(v => v.trim());
+            const obj = {};
+            
+            headers.forEach((header, index) => {
+                let value = values[index] || '';
+                
+                // Convert numeric fields
+                if (['harga_jual', 'buyback', 'harga'].includes(header)) {
+                    value = parseInt(value.replace(/[^0-9]/g, '')) || 0;
+                }
+                
+                obj[header] = value;
+            });
+            
+            return obj;
+        });
+    } catch (error) {
+        console.error('CSV parsing error:', error);
+        return [];
+    }
+}
+
+function parseRunningTextCSV(csvText) {
+    try {
+        const lines = csvText.trim().split('\n');
+        if (lines.length === 0) return [];
+        
+        if (lines.length === 1) {
+            return [{ teks: lines[0].trim() }];
+        }
+        
+        const headers = lines[0]
+            .split(',')
+            .map(h => h.toLowerCase().replace(/\s+/g, '_').trim());
+        
+        const textColumn = headers.find(h => 
+            h.includes('teks') || h.includes('text') || h.includes('isi')
+        ) || headers[0];
+        
+        return lines.slice(1).map(line => {
+            const values = line.split(',').map(v => v.trim());
+            
+            if (values.length === 1) {
+                return { teks: values[0] };
+            }
+            
+            const textIndex = headers.indexOf(textColumn);
+            const teks = textIndex >= 0 && textIndex < values.length 
+                ? values[textIndex] 
+                : values.join(' ');
+            
+            return { teks: teks.trim() };
+        }).filter(item => item.teks && item.teks.length > 0);
+    } catch (error) {
+        console.error('Running text CSV error:', error);
+        return [];
+    }
+}
+
+function parseAdsCSV(csvText) {
+    try {
+        const lines = csvText.trim().split('\n');
+        if (lines.length === 0) return [];
+        
+        if (lines.length === 1) {
+            const values = lines[0].split(',').map(v => v.trim());
+            if (values.length >= 7) {
+                return [{
+                    judul: values[0],
+                    deskripsi: values[1],
+                    video_url: values[2],
+                    gambar_url: values[3],
+                    link1: values[4],
+                    link2: values[5],
+                    status: values[6]
+                }];
+            }
+            return [];
+        }
+        
+        const headers = lines[0]
+            .split(',')
+            .map(h => h.toLowerCase().replace(/\s+/g, '_').trim());
+        
+        return lines.slice(1)
+            .map(line => {
+                const values = line.split(',').map(v => v.trim());
+                const obj = {};
+                
+                headers.forEach((header, index) => {
+                    if (index < values.length) {
+                        obj[header] = values[index];
+                    }
+                });
+                
+                return obj;
+            })
+            .filter(ad => 
+                ad.video_url &&
+                ad.video_url.trim() !== '' &&
+                ad.status &&
+                ad.status.toLowerCase() === 'active'
+            );
+    } catch (error) {
+        console.error('Ads CSV error:', error);
+        return [];
+    }
+}
+
+// ============================================
+// RESPONSIVE LAYOUT MANAGEMENT
+// ============================================
+function handleResponsiveLayout() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    
+    // Device type detection
+    const isMobile = width <= 768;
+    const isTablet = width > 768 && width <= 1024;
+    const isDesktop = width > 1024 && width <= 1440;
+    const isLargeScreen = width > 1440 && width <= 1920;
+    const isTV = width > 1920;
+    
+    console.log(`📱 Responsive: ${width}x${height} | ${isMobile ? 'Mobile' : isTablet ? 'Tablet' : isDesktop ? 'Desktop' : isLargeScreen ? 'Large' : 'TV'}`);
+    
+    // Adjust table heights
+    const tables = document.querySelectorAll('.price-table-card');
+    const availableHeight = height - 200; // Account for header and footer
+    
+    tables.forEach(table => {
+        if (isMobile) {
+            table.style.minHeight = '350px';
+        } else if (isTablet) {
+            table.style.minHeight = '400px';
+        } else if (isDesktop) {
+            table.style.minHeight = '450px';
+        } else if (isLargeScreen) {
+            table.style.minHeight = '500px';
+        } else {
+            table.style.minHeight = '600px';
+        }
+        
+        // Ensure doesn't exceed viewport
+        if (table.offsetHeight > availableHeight) {
+            table.style.minHeight = availableHeight + 'px';
+        }
+    });
+    
+    // Adjust ticker speed
+    adjustTickerSpeedBasedOnWidth(width);
+    
+    // Adjust font sizes for TV
+    if (isTV) {
+        document.documentElement.style.fontSize = '18px';
+    } else {
+        document.documentElement.style.fontSize = '';
+    }
+    
+    // Handle mobile menu
+    if (isMobile) {
+        document.querySelector('.hamburger-btn').style.display = 'flex';
+    } else {
+        document.querySelector('.hamburger-btn').style.display = 'none';
+    }
+}
+
+function adjustTickerSpeedBasedOnWidth(width) {
+    const marqueeText = document.getElementById('marqueeText');
+    if (!marqueeText) return;
+    
     const textLength = marqueeText.textContent.length;
-    const baseDuration = isMobile ? 120 : isTablet ? 90 : 60;
-    const duration = Math.max(baseDuration, textLength / 8);
+    let baseDuration;
     
+    if (width <= 480) baseDuration = 40;
+    else if (width <= 768) baseDuration = 50;
+    else if (width <= 1024) baseDuration = 60;
+    else if (width <= 1440) baseDuration = 70;
+    else baseDuration = 80;
+    
+    const duration = Math.max(baseDuration, textLength / 15);
+    
+    // Smooth transition
+    marqueeText.style.transition = 'none';
     marqueeText.style.animation = 'none';
+    
     setTimeout(() => {
-      marqueeText.style.animation = `marquee ${duration}s linear infinite`;
+        marqueeText.style.animation = `tickerScroll ${duration}s linear infinite`;
     }, 10);
-  }
 }
 
-// Event listener untuk resize
-window.addEventListener('resize', handleResponsiveLayout);
-window.addEventListener('orientationchange', handleResponsiveLayout);
-
-// Fungsi untuk refresh data secara periodik
-function startPeriodicRefresh() {
-  setInterval(() => {
-    console.log("Memperbarui data dari server...");
-    loadPriceData();
-    loadRunningText();
-    loadAdsData();
-  }, 5 * 60 * 1000);
+function adjustTickerSpeed(textLength) {
+    adjustTickerSpeedBasedOnWidth(window.innerWidth);
 }
 
-// Start periodic refresh setelah semua komponen siap
-setTimeout(() => {
-  startPeriodicRefresh();
-}, 10000);
+// ============================================
+// NAVIGATION & ROTATION
+// ============================================
+function navigateTables(direction) {
+    const types = APP_CONFIG.rotation.types;
+    const currentIndex = types.indexOf(app.currentTableType);
+    let nextIndex;
+    
+    if (direction === 'right') {
+        nextIndex = (currentIndex + 1) % types.length;
+    } else {
+        nextIndex = (currentIndex - 1 + types.length) % types.length;
+    }
+    
+    app.currentTableType = types[nextIndex];
+    displayTables(app.currentTableType);
+    
+    // Check if should show video for "archi" type
+    if (app.currentTableType === 'archi' && app.hasActiveAds() && !app.videoPlayed) {
+        setTimeout(() => {
+            showVideo();
+        }, APP_CONFIG.video.delayBeforeShow);
+    }
+}
 
-// YouTube API callback global
-window.onYouTubeIframeAPIReady = function () {
-  console.log("YouTube API siap digunakan");
+function startTableRotation() {
+    if (app.rotationInterval) {
+        clearInterval(app.rotationInterval);
+    }
+    
+    app.rotationInterval = setInterval(() => {
+        navigateTables('right');
+    }, APP_CONFIG.rotation.interval);
+}
+
+// ============================================
+// ERROR HANDLING & UI STATES
+// ============================================
+function showNoDataState() {
+    const html = `
+        <div class="no-data-message">
+            <i class="fas fa-database" style="font-size: 48px; margin-bottom: 20px; color: var(--dark-gray);"></i>
+            <h3 style="margin-bottom: 10px; color: var(--text-dark);">Data Tidak Tersedia</h3>
+            <p style="color: var(--text-light);">Tidak ada data harga emas untuk ditampilkan</p>
+        </div>
+    `;
+    
+    document.getElementById('priceTableLeft').innerHTML = html;
+    document.getElementById('priceTableRight').innerHTML = html;
+}
+
+function showErrorState(elementId, message) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    element.innerHTML = `
+        <div class="error-state">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3>Terjadi Kesalahan</h3>
+            <p>${escapeHTML(message)}</p>
+            <button onclick="loadPriceData()" style="margin-top: 20px; padding: 10px 20px; background: var(--primary-gold); color: white; border: none; border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif;">
+                <i class="fas fa-redo" style="margin-right: 8px;"></i>
+                Coba Lagi
+            </button>
+        </div>
+    `;
+}
+
+function showErrorMessage(message) {
+    // Create error toast
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--error);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+        z-index: 9999;
+        font-family: 'Poppins', sans-serif;
+        max-width: 300px;
+        animation: slideInRight 0.3s ease;
+    `;
+    
+    toast.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-exclamation-circle" style="font-size: 20px;"></i>
+            <div>
+                <strong style="display: block; margin-bottom: 5px;">Error</strong>
+                <span>${escapeHTML(message)}</span>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300);
+    }, 5000);
+}
+
+// ============================================
+// USER INTERACTION & AUTOPLAY
+// ============================================
+function handleUserInteraction() {
+    app.setUserInteracted();
+    
+    // Try to play video with sound if video is active
+    if (app.youtubePlayer && 
+        document.getElementById('videoContainer').classList.contains('active')) {
+        setTimeout(playVideoWithSound, 500);
+    }
+}
+
+function loadYouTubeAPI() {
+    if (app.isYouTubeAPILoaded || window.YT) return;
+    
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    app.isYouTubeAPILoaded = true;
+    
+    console.log('📺 YouTube API loading...');
+}
+
+// YouTube API global callback
+window.onYouTubeIframeAPIReady = function() {
+    console.log('✅ YouTube API ready');
 };
 
-// Initialize responsive layout
-handleResponsiveLayout();
+// ============================================
+// PERIODIC REFRESH
+// ============================================
+function startPeriodicRefresh() {
+    // Refresh data every 5 minutes
+    setInterval(() => {
+        console.log('🔄 Refreshing data from server...');
+        loadAllData();
+    }, 5 * 60 * 1000);
+}
+
+// ============================================
+// MOBILE MENU
+// ============================================
+function toggleMobileMenu() {
+    const header = document.querySelector('.main-header');
+    header.classList.toggle('menu-open');
+    
+    // Add mobile menu styles if needed
+    if (!document.getElementById('mobileMenuStyles')) {
+        const style = document.createElement('style');
+        style.id = 'mobileMenuStyles';
+        style.textContent = `
+            @media (max-width: 768px) {
+                .main-header.menu-open .header-container {
+                    flex-direction: column;
+                    height: auto;
+                    padding: 15px;
+                }
+                
+                .main-header.menu-open .brand-logo {
+                    width: 100%;
+                    justify-content: space-between;
+                }
+                
+                .main-header.menu-open .ticker-container {
+                    margin-top: 10px;
+                    order: 3;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+// ============================================
+// INITIALIZATION & GLOBAL EXPORTS
+// ============================================
+// Make some functions globally available
+window.playNextVideo = playNextVideo;
+window.hideVideo = hideVideo;
+window.toggleVideoMute = toggleVideoMute;
+window.handleUserInteraction = handleUserInteraction;
+
+// Initialize on load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApplication);
+} else {
+    initializeApplication();
+}
