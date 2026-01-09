@@ -165,7 +165,7 @@ body {
     margin-top: 2px;
 }
 
-/* Ticker/Marquee - DIPERBAIKI AGAR TEXT TIDAK HILANG */
+/* Ticker/Marquee */
 .ticker-container {
     flex: 1;
     min-width: 0;
@@ -206,17 +206,6 @@ body {
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-/* MARQUEE STYLES */
-marquee.ticker-text {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    line-height: 1;
-    padding: 0;
-    margin: 0;
-}
-
 /* Hamburger Button */
 .hamburger-btn {
     display: none;
@@ -245,94 +234,117 @@ marquee.ticker-text {
    ============================================ */
 .content-area {
     flex: 1;
-    padding: var(--space-xl) 0;
-    min-height: calc(100vh - var(--header-height) - 180px);
+    padding: var(--space-lg) 0;
+    min-height: calc(100vh - var(--header-height) - 150px);
 }
 
 .price-display {
     display: flex;
     flex-direction: column;
-    gap: var(--space-xl);
-}
-
-/* Tables Layout - DIPERBAIKI RESPONSIVENYA */
-.tables-layout {
-    display: flex;
-    align-items: stretch;
     gap: var(--space-lg);
-    width: 100%;
-    min-height: 500px;
 }
 
-.tables-responsive-wrapper {
-    flex: 1;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: var(--space-lg);
-    width: 100%;
-}
-
-.scroll-btn {
-    background: var(--primary-gold);
-    color: var(--white);
-    border: none;
-    border-radius: 50%;
-    width: 48px;
-    height: 48px;
+/* Table Navigation Tabs */
+.table-tabs {
     display: flex;
-    align-items: center;
-    justify-content: center;
+    gap: var(--space-sm);
+    overflow-x: auto;
+    padding-bottom: var(--space-sm);
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.table-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.tab-btn {
+    padding: var(--space-sm) var(--space-lg);
+    background: var(--white);
+    border: 2px solid var(--medium-gray);
+    border-radius: var(--radius-md);
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    font-size: var(--font-sm);
+    color: var(--text-light);
     cursor: pointer;
-    font-size: var(--font-lg);
     transition: all 0.3s ease;
+    white-space: nowrap;
     flex-shrink: 0;
-    align-self: center;
+}
+
+.tab-btn:hover {
+    border-color: var(--primary-gold);
+    color: var(--primary-gold);
+}
+
+.tab-btn.active {
+    background: var(--primary-gold);
+    border-color: var(--primary-gold);
+    color: var(--white);
     box-shadow: var(--shadow-sm);
 }
 
-.scroll-btn:hover {
-    background: var(--gold-dark);
-    transform: scale(1.1);
-    box-shadow: var(--shadow-md);
+/* Tables Container */
+.tables-container {
+    position: relative;
+    min-height: 500px;
 }
 
-.scroll-btn:active {
-    transform: scale(0.95);
-}
-
-/* Price Table Cards */
 .price-table-card {
     background: var(--white);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-lg);
     overflow: hidden;
-    display: flex;
+    display: none;
     flex-direction: column;
-    min-height: 400px;
-    max-height: 600px;
     border: 1px solid var(--medium-gray);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     width: 100%;
 }
 
+.price-table-card.active {
+    display: flex;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .price-table-card:hover {
-    transform: translateY(-4px);
+    transform: translateY(-2px);
     box-shadow: var(--shadow-lg), var(--shadow-gold);
 }
 
 .table-header {
     background: linear-gradient(135deg, var(--primary-gold), var(--gold-dark));
-    padding: var(--space-lg);
+    padding: var(--space-md) var(--space-lg);
     text-align: center;
     flex-shrink: 0;
 }
 
 .table-title {
     color: var(--white);
-    font-size: var(--font-xxl);
+    font-size: var(--font-xl);
     font-weight: 700;
     margin: 0;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+    line-height: 1.2;
+}
+
+.table-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: var(--font-sm);
+    font-weight: 500;
+    margin-top: var(--space-xs);
 }
 
 .table-body {
@@ -340,57 +352,59 @@ marquee.ticker-text {
     display: flex;
     flex-direction: column;
     min-height: 0;
+}
+
+.table-content {
+    flex: 1;
+    padding: var(--space-md);
     overflow: hidden;
 }
 
-.table-scroll-wrapper {
-    flex: 1;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
-.table-scroll {
-    flex: 1;
-    overflow-x: auto;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    border-radius: var(--radius-lg);
-    background: var(--light-gray);
-    min-height: 300px;
-}
-
-/* Price Table Styles */
+/* RESPONSIVE TABLE STYLES - TANPA SCROLL HORIZONTAL */
 .price-table {
     width: 100%;
     border-collapse: collapse;
     font-size: var(--font-base);
-    min-width: 100%;
     table-layout: fixed;
 }
 
 .price-table thead {
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    background: var(--secondary-dark);
 }
 
 .price-table th {
-    background: var(--secondary-dark);
     color: var(--white);
-    padding: var(--space-md) var(--space-lg);
+    padding: var(--space-md);
     text-align: left;
     font-weight: 600;
-    font-size: var(--font-lg);
+    font-size: var(--font-base);
     border-bottom: 3px solid var(--primary-gold);
-    position: sticky;
-    top: 0;
-    z-index: 20;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Atur lebar kolom untuk responsif */
+.price-table th:nth-child(1),
+.price-table td:nth-child(1) {
+    width: 30%; /* Kode */
+    min-width: 100px;
+}
+
+.price-table th:nth-child(2),
+.price-table td:nth-child(2) {
+    width: 35%; /* Harga Jual */
+    min-width: 150px;
+}
+
+.price-table th:nth-child(3),
+.price-table td:nth-child(3) {
+    width: 35%; /* Buyback */
+    min-width: 150px;
 }
 
 .price-table td {
-    padding: var(--space-md) var(--space-lg);
+    padding: var(--space-md);
     border-bottom: 1px solid var(--medium-gray);
     transition: background-color 0.2s ease;
     white-space: nowrap;
@@ -413,7 +427,7 @@ marquee.ticker-text {
 .price-table .highlight {
     color: var(--primary-gold);
     font-weight: 700;
-    font-size: var(--font-lg);
+    font-size: var(--font-base);
 }
 
 .price-table .code-cell {
@@ -421,8 +435,19 @@ marquee.ticker-text {
     color: var(--text-dark);
 }
 
+/* Compact table style for mobile */
+.price-table.compact th,
+.price-table.compact td {
+    padding: var(--space-sm);
+    font-size: var(--font-sm);
+}
+
+.price-table.compact .highlight {
+    font-size: var(--font-sm);
+}
+
 /* ============================================
-   VIDEO AD CONTAINER - RESPONSIVE & UKURAN DIPERKECIL
+   VIDEO AD CONTAINER
    ============================================ */
 .video-ad-container {
     display: none;
@@ -430,10 +455,10 @@ marquee.ticker-text {
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-lg);
     overflow: hidden;
-    margin-top: var(--space-xl);
+    margin-top: var(--space-lg);
     border: 2px solid var(--primary-gold);
     position: relative;
-    max-width: 800px;
+    max-width: 600px;
     margin-left: auto;
     margin-right: auto;
 }
@@ -461,7 +486,6 @@ marquee.ticker-text {
     overflow: hidden;
 }
 
-/* Video Responsive Wrapper */
 .video-responsive-wrapper {
     position: relative;
     width: 100%;
@@ -500,14 +524,14 @@ marquee.ticker-text {
 }
 
 .placeholder-content i {
-    font-size: 4rem;
+    font-size: 3rem;
     color: var(--primary-gold);
-    margin-bottom: var(--space-lg);
+    margin-bottom: var(--space-md);
     opacity: 0.8;
 }
 
 .placeholder-content p {
-    font-size: var(--font-lg);
+    font-size: var(--font-base);
     color: var(--light-gray);
     font-weight: 500;
 }
@@ -515,28 +539,28 @@ marquee.ticker-text {
 /* Video Controls Panel */
 .video-controls-panel {
     background: rgba(26, 43, 60, 0.95);
-    padding: var(--space-md) var(--space-lg);
+    padding: var(--space-sm) var(--space-md);
     display: flex;
     justify-content: flex-end;
-    gap: var(--space-md);
+    gap: var(--space-sm);
     align-items: center;
     backdrop-filter: blur(10px);
     border-top: 1px solid rgba(212, 175, 55, 0.3);
 }
 
 .control-btn {
-    padding: var(--space-sm) var(--space-lg);
+    padding: var(--space-xs) var(--space-md);
     border: none;
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     font-family: 'Poppins', sans-serif;
     font-weight: 600;
-    font-size: var(--font-base);
+    font-size: var(--font-sm);
     cursor: pointer;
     transition: all 0.3s ease;
     display: inline-flex;
     align-items: center;
-    gap: var(--space-sm);
-    min-height: 44px;
+    gap: var(--space-xs);
+    min-height: 36px;
 }
 
 .mute-btn {
@@ -547,7 +571,7 @@ marquee.ticker-text {
 
 .mute-btn:hover {
     background: rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
 .skip-btn {
@@ -557,7 +581,7 @@ marquee.ticker-text {
 
 .skip-btn:hover {
     background: #E67E22;
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
 .close-btn {
@@ -567,35 +591,30 @@ marquee.ticker-text {
 
 .close-btn:hover {
     background: #C0392B;
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
 /* ============================================
-   FOOTER - DIPERKECIL & MINIMALIS
+   FOOTER - MINIMALIS
    ============================================ */
 .main-footer {
     background: var(--primary-dark);
     color: var(--white);
-    padding: var(--space-lg) 0 var(--space-md);
+    padding: var(--space-md) 0;
     margin-top: auto;
     border-top: 3px solid var(--primary-gold);
-    position: relative;
     width: 100%;
 }
 
 .footer-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: var(--space-lg);
-    margin-bottom: var(--space-lg);
+    margin-bottom: var(--space-md);
 }
 
 .footer-column {
-    padding: var(--space-md);
-    border-radius: var(--radius-md);
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: var(--space-sm);
 }
 
 .footer-title {
@@ -616,13 +635,13 @@ marquee.ticker-text {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    margin-bottom: var(--space-sm);
+    margin-bottom: var(--space-xs);
 }
 
 .contact-icon {
     color: var(--primary-gold);
-    font-size: var(--font-base);
-    width: 20px;
+    font-size: var(--font-sm);
+    width: 16px;
     text-align: center;
 }
 
@@ -631,82 +650,24 @@ marquee.ticker-text {
     color: var(--light-gray);
 }
 
-/* Social Buttons */
-.social-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
-}
-
-.social-btn {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    padding: var(--space-sm) var(--space-md);
-    border-radius: var(--radius-md);
-    text-decoration: none;
-    color: var(--white);
-    font-weight: 500;
-    font-size: var(--font-sm);
-    transition: all 0.2s ease;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.05);
-}
-
-.social-btn:hover {
-    transform: translateX(3px);
-    border-color: var(--primary-gold);
-}
-
-.instagram-btn:hover {
-    background: linear-gradient(45deg, #405DE6, #5851DB, #833AB4, #C13584, #E1306C, #FD1D1D);
-}
-
-.whatsapp-btn:hover {
-    background: linear-gradient(45deg, #25D366, #128C7E);
-}
-
-.social-btn i {
-    font-size: var(--font-lg);
-    width: 20px;
-}
-
 /* Location Info */
 .location-info {
     display: flex;
     align-items: flex-start;
     gap: var(--space-sm);
-    padding: var(--space-sm);
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: var(--radius-md);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: var(--space-xs);
 }
 
 .location-icon {
     color: var(--primary-gold);
-    font-size: var(--font-base);
+    font-size: var(--font-sm);
     margin-top: 2px;
 }
 
 .location-text {
     font-size: var(--font-sm);
     color: var(--light-gray);
-    line-height: 1.5;
-}
-
-/* Footer Info & Copyright */
-.footer-info {
-    font-size: var(--font-xs);
-    color: var(--dark-gray);
-    line-height: 1.5;
-    margin-bottom: var(--space-sm);
-}
-
-.copyright {
-    font-size: var(--font-xs);
-    color: var(--dark-gray);
-    padding-top: var(--space-sm);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    line-height: 1.4;
 }
 
 /* Footer Bottom */
@@ -714,7 +675,13 @@ marquee.ticker-text {
     text-align: center;
     padding-top: var(--space-md);
     border-top: 1px solid rgba(255, 255, 255, 0.1);
-    margin-top: var(--space-lg);
+    margin-top: var(--space-md);
+}
+
+.copyright {
+    font-size: var(--font-xs);
+    color: var(--dark-gray);
+    margin-bottom: var(--space-xs);
 }
 
 .footer-note {
@@ -733,7 +700,7 @@ marquee.ticker-text {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 300px;
+    min-height: 300px;
     text-align: center;
     padding: var(--space-xl);
     border-radius: var(--radius-lg);
@@ -741,16 +708,16 @@ marquee.ticker-text {
 }
 
 .loading-state i {
-    font-size: 3rem;
+    font-size: 2.5rem;
     color: var(--primary-gold);
-    margin-bottom: var(--space-lg);
+    margin-bottom: var(--space-md);
     animation: spin 1s linear infinite;
 }
 
 .error-state i {
-    font-size: 3rem;
+    font-size: 2.5rem;
     color: var(--error);
-    margin-bottom: var(--space-lg);
+    margin-bottom: var(--space-md);
 }
 
 @keyframes spin {
@@ -760,82 +727,54 @@ marquee.ticker-text {
 
 .no-data-message {
     text-align: center;
-    padding: var(--space-xxl);
+    padding: var(--space-xl);
     color: var(--dark-gray);
     font-style: italic;
     font-size: var(--font-lg);
-}
-
-/* User Interaction Animation */
-.user-interacted .video-ad-container {
-    animation: pulseGlow 2s ease-in-out infinite;
-}
-
-@keyframes pulseGlow {
-    0%, 100% {
-        box-shadow: var(--shadow-lg), 0 0 20px rgba(212, 175, 55, 0.3);
-    }
-    50% {
-        box-shadow: var(--shadow-lg), 0 0 40px rgba(212, 175, 55, 0.6);
-    }
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
 }
 
 /* ============================================
-   RESPONSIVE DESIGN - PROFESSIONAL
+   RESPONSIVE DESIGN
    ============================================ */
 
-/* Large Desktop & TV */
-@media (min-width: 1600px) {
-    :root {
-        --container-max: 1600px;
-        --font-base: 1.125rem;
-        --font-lg: 1.375rem;
-        --font-xl: 1.5rem;
-        --font-xxl: 1.75rem;
-        --font-xxxl: 2.5rem;
-    }
-    
-    .tables-layout {
-        min-height: 600px;
-    }
-    
-    .price-table-card {
-        min-height: 500px;
-    }
-}
-
-/* Desktop */
-@media (max-width: 1199px) {
-    .tables-layout {
-        gap: var(--space-md);
-    }
-    
-    .tables-responsive-wrapper {
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+/* Desktop Large */
+@media (min-width: 1200px) {
+    .price-table {
+        font-size: var(--font-lg);
     }
     
     .price-table th,
     .price-table td {
-        padding: var(--space-sm) var(--space-md);
+        padding: var(--space-md) var(--space-lg);
     }
 }
 
 /* Tablet Landscape */
 @media (max-width: 1024px) and (orientation: landscape) {
-    .tables-responsive-wrapper {
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    .content-area {
+        padding: var(--space-md) 0;
     }
     
     .price-table-card {
-        min-height: 350px;
+        min-height: 400px;
     }
     
-    .table-scroll {
-        max-height: 250px;
+    .table-content {
+        padding: var(--space-sm);
     }
     
-    .main-footer {
-        padding: var(--space-lg) 0 var(--space-md);
+    .price-table {
+        font-size: var(--font-sm);
+    }
+    
+    .price-table th,
+    .price-table td {
+        padding: var(--space-sm);
     }
 }
 
@@ -843,7 +782,7 @@ marquee.ticker-text {
 @media (max-width: 768px) {
     .header-container {
         flex-wrap: wrap;
-        padding: var(--space-md);
+        padding: var(--space-sm);
     }
     
     .brand-logo {
@@ -866,34 +805,69 @@ marquee.ticker-text {
         font-size: var(--font-sm);
     }
     
-    .tables-layout {
-        flex-direction: column;
-        gap: var(--space-lg);
+    .content-area {
+        padding: var(--space-md) 0;
     }
     
-    .scroll-btn {
-        display: none;
+    .table-tabs {
+        gap: var(--space-xs);
     }
     
-    .tables-responsive-wrapper {
-        grid-template-columns: 1fr;
-        gap: var(--space-lg);
+    .tab-btn {
+        padding: var(--space-xs) var(--space-md);
+        font-size: var(--font-xs);
+        flex: 1;
+        text-align: center;
     }
     
-    .price-table-card {
-        min-height: 350px;
-        width: 100%;
+    .table-title {
+        font-size: var(--font-lg);
+    }
+    
+    .table-subtitle {
+        font-size: var(--font-xs);
+    }
+    
+    .table-content {
+        padding: var(--space-sm);
+    }
+    
+    /* Responsive table adjustments */
+    .price-table {
+        font-size: var(--font-sm);
+    }
+    
+    .price-table th,
+    .price-table td {
+        padding: var(--space-xs) var(--space-sm);
+    }
+    
+    .price-table th:nth-child(1),
+    .price-table td:nth-child(1) {
+        width: 25%;
+        min-width: 80px;
+    }
+    
+    .price-table th:nth-child(2),
+    .price-table td:nth-child(2) {
+        width: 37.5%;
+        min-width: 120px;
+    }
+    
+    .price-table th:nth-child(3),
+    .price-table td:nth-child(3) {
+        width: 37.5%;
+        min-width: 120px;
     }
     
     .footer-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: 1fr;
         gap: var(--space-md);
     }
     
     .video-ad-container {
         max-width: 100%;
-        margin-left: 0;
-        margin-right: 0;
+        margin: var(--space-md) 0;
     }
 }
 
@@ -901,10 +875,6 @@ marquee.ticker-text {
 @media (max-width: 480px) {
     :root {
         --header-height: 60px;
-    }
-    
-    .header-container {
-        padding: var(--space-sm);
     }
     
     .brand-name {
@@ -929,53 +899,50 @@ marquee.ticker-text {
     }
     
     .table-title {
-        font-size: var(--font-xl);
+        font-size: var(--font-base);
+        padding: var(--space-xs) 0;
     }
     
-    .price-table {
-        font-size: var(--font-sm);
-    }
-    
-    .price-table th,
-    .price-table td {
-        padding: var(--space-xs) var(--space-sm);
+    /* Compact table for small screens */
+    .price-table.compact {
         font-size: var(--font-xs);
     }
     
-    .price-table .highlight {
-        font-size: var(--font-base);
+    .price-table.compact th,
+    .price-table.compact td {
+        padding: var(--space-xs);
     }
     
-    .footer-grid {
-        grid-template-columns: 1fr;
+    .price-table.compact th:nth-child(1),
+    .price-table.compact td:nth-child(1) {
+        width: 20%;
+        min-width: 60px;
     }
     
-    .footer-column {
-        padding: var(--space-sm);
+    .price-table.compact th:nth-child(2),
+    .price-table.compact td:nth-child(2) {
+        width: 40%;
+        min-width: 100px;
     }
     
-    .social-buttons {
-        flex-direction: row;
-        flex-wrap: wrap;
-    }
-    
-    .social-btn {
-        flex: 1;
-        min-width: 120px;
-        justify-content: center;
+    .price-table.compact th:nth-child(3),
+    .price-table.compact td:nth-child(3) {
+        width: 40%;
+        min-width: 100px;
     }
     
     .video-controls-panel {
         flex-wrap: wrap;
         justify-content: center;
+        gap: var(--space-xs);
     }
     
     .control-btn {
         flex: 1;
-        min-width: 100px;
+        min-width: 90px;
         justify-content: center;
-        font-size: var(--font-sm);
-        padding: var(--space-xs) var(--space-sm);
+        font-size: var(--font-xs);
+        padding: var(--space-xs);
     }
 }
 
@@ -985,64 +952,43 @@ marquee.ticker-text {
         font-size: var(--font-base);
     }
     
+    .tab-btn {
+        font-size: 0.7rem;
+        padding: var(--space-xs) var(--space-sm);
+    }
+    
     .table-title {
-        font-size: var(--font-lg);
+        font-size: var(--font-sm);
     }
     
     .price-table {
         font-size: var(--font-xs);
-    }
-    
-    .social-btn {
-        min-width: 100px;
     }
     
     .control-btn {
         min-width: 80px;
-        font-size: var(--font-xs);
-        padding: var(--space-xs) var(--space-sm);
+        font-size: 0.7rem;
     }
 }
 
-/* TV & Large Screen Optimization */
+/* TV & Large Screen */
 @media (min-width: 1921px) {
     :root {
-        --container-max: 1800px;
-        --font-base: 1.25rem;
-        --font-lg: 1.5rem;
-        --font-xl: 1.75rem;
-        --font-xxl: 2rem;
-        --font-xxxl: 3rem;
-        --header-height: 100px;
-        --space-lg: 2rem;
-        --space-xl: 2.5rem;
-        --space-xxl: 4rem;
-    }
-    
-    .logo-img {
-        width: 80px;
-        height: 80px;
-    }
-    
-    .scroll-btn {
-        width: 64px;
-        height: 64px;
-        font-size: var(--font-xxl);
-    }
-    
-    .main-footer {
-        padding: var(--space-xl) 0 var(--space-lg);
-    }
-}
-
-/* High DPI/Retina Displays */
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-    .logo-image {
-        image-rendering: crisp-edges;
+        --container-max: 1600px;
+        --font-base: 1.125rem;
+        --font-lg: 1.375rem;
+        --font-xl: 1.5rem;
+        --font-xxl: 1.75rem;
+        --font-xxxl: 2.5rem;
     }
     
     .price-table {
-        border-collapse: separate;
+        font-size: var(--font-lg);
+    }
+    
+    .price-table th,
+    .price-table td {
+        padding: var(--space-lg);
     }
 }
 
@@ -1050,10 +996,9 @@ marquee.ticker-text {
 @media print {
     .main-header,
     .video-ad-container,
-    .scroll-btn,
-    .hamburger-btn,
-    .social-buttons,
-    .footer-bottom {
+    .table-tabs,
+    .tab-btn:not(.active),
+    .hamburger-btn {
         display: none !important;
     }
     
@@ -1063,7 +1008,8 @@ marquee.ticker-text {
         font-size: 12pt !important;
     }
     
-    .price-table-card {
+    .price-table-card.active {
+        display: flex !important;
         box-shadow: none !important;
         border: 2px solid #ddd !important;
         break-inside: avoid;
@@ -1073,23 +1019,6 @@ marquee.ticker-text {
         background: white !important;
         color: black !important;
         border-top: 2px solid #ddd !important;
-    }
-    
-    .footer-column {
-        background: white !important;
-        border: 1px solid #ddd !important;
-        color: black !important;
-    }
-    
-    .footer-title {
-        color: black !important;
-    }
-    
-    .contact-text,
-    .location-text,
-    .footer-info,
-    .copyright {
-        color: #666 !important;
     }
 }
 
@@ -1103,15 +1032,13 @@ marquee.ticker-text {
         transition-duration: 0.01ms !important;
     }
     
-    .ticker-text {
+    .price-table-card.active {
         animation: none;
-        text-align: center;
     }
     
-    .video-ad-container.active,
-    .scroll-btn:hover,
-    .footer-column:hover,
-    .social-btn:hover {
+    .tab-btn:hover,
+    .control-btn:hover,
+    .price-table-card:hover {
         transform: none;
     }
 }
