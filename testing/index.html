@@ -1,109 +1,167 @@
 <!DOCTYPE html>
 <html lang="id">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Harga Emas Real-time</title>
+    <title>Harga Emas Real-time - Pantes CitiMall Garut</title>
+    <meta name="description" content="Informasi harga emas terbaru secara real-time dari Pantes CitiMall Garut">
     <link rel="stylesheet" href="style.css" />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
-  </head>
-  <body>
-    <div class="app-container">
-      <header class="header">
-        <div class="container header-container">
-          <div class="logo">
-            <span class="logo-icon">
-              <img
-                src="https://tokomaspantes.wordpress.com/wp-content/uploads/2021/07/logo-pantes-new-size.png?w=301"
-                alt="Pantes BIP Logo"
-                class="logo-image"
-              />
-            </span>
-            <h1>Pantes<span>CitiMall Garut</span></h1>
-          </div>
+    <link rel="icon" type="image/x-icon" href="https://tokomaspantes.wordpress.com/wp-content/uploads/2021/07/logo-pantes-new-size.png">
+</head>
+<body>
+    <div class="app-wrapper">
+        <!-- Header -->
+        <header class="main-header">
+            <div class="header-container">
+                <div class="brand-logo">
+                    <div class="logo-img">
+                        <img src="https://tokomaspantes.wordpress.com/wp-content/uploads/2021/07/logo-pantes-new-size.png?w=301"
+                             alt="Logo Pantes CitiMall Garut"
+                             class="logo-image"
+                             loading="lazy">
+                    </div>
+                    <div class="logo-text">
+                        <h1 class="brand-name">Pantes<span class="brand-subtitle">CitiMall Garut</span></h1>
+                    </div>
+                </div>
 
-          <div class="marquee-container">
-            <div class="marquee">
-              <span class="marquee-text" id="marqueeText"
-                >Memuat informasi harga emas terbaru...</span
-              >
+                <div class="ticker-container">
+                    <div class="ticker-wrapper">
+                        <div class="ticker-content">
+                            <span class="ticker-text" id="marqueeText">Memuat informasi harga emas terbaru...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="hamburger-btn" aria-label="Toggle Menu" id="menuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
             </div>
-          </div>
+        </header>
 
-          <button class="mobile-menu-btn" aria-label="Menu">
-            <i class="fas fa-bars"></i>
-          </button>
-        </div>
-      </header>
+        <!-- Main Content -->
+        <main class="content-area">
+            <div class="content-container">
+                <section class="price-display">
+                    <div class="tables-layout">
+                        <button class="scroll-btn prev-btn" aria-label="Previous Table">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
 
-      <main class="main-content">
-        <div class="container">
-          <section class="price-section">
-            <div class="tables-container">
-              <button class="nav-btn left-nav" aria-label="Tabel Sebelumnya">
-                <i class="fas fa-chevron-left"></i>
-              </button>
+                        <div class="price-table-card" id="tableEmas">
+                            <div class="table-header">
+                                <h2 class="table-title">Harga Emas</h2>
+                            </div>
+                            <div class="table-body">
+                                <div class="table-scroll" id="priceTableLeft"></div>
+                            </div>
+                        </div>
 
-              <div class="table-wrapper" id="tableEmas">
-                <h2 class="table-title">Harga Emas</h2>
-                <div class="table-responsive" id="priceTableLeft"></div>
-              </div>
+                        <div class="price-table-card" id="tableAntam">
+                            <div class="table-header">
+                                <h2 class="table-title">Harga Antam</h2>
+                            </div>
+                            <div class="table-body">
+                                <div class="table-scroll" id="priceTableRight"></div>
+                            </div>
+                        </div>
 
-              <div class="table-wrapper" id="tableAntam">
-                <h2 class="table-title">Harga Antam</h2>
-                <div class="table-responsive" id="priceTableRight"></div>
-              </div>
+                        <button class="scroll-btn next-btn" aria-label="Next Table">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
 
-              <button class="nav-btn right-nav" aria-label="Tabel Berikutnya">
-                <i class="fas fa-chevron-right"></i>
-              </button>
+                    <!-- Video Ad Container -->
+                    <div class="video-ad-container" id="videoContainer">
+                        <div class="video-player-wrapper">
+                            <div class="video-placeholder" id="videoPlaceholder">
+                                <div class="placeholder-content">
+                                    <i class="fas fa-play-circle"></i>
+                                    <p>Video Iklan Akan Ditampilkan di Sini</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="video-controls-panel">
+                            <button class="control-btn mute-btn" id="muteBtn" aria-label="Toggle Mute">
+                                <i class="fas fa-volume-up"></i>
+                            </button>
+                            <button class="control-btn skip-btn" id="skipBtn" aria-label="Skip Video">
+                                <i class="fas fa-forward"></i> Lewati
+                            </button>
+                            <button class="control-btn close-btn" id="closeVideoBtn" aria-label="Close Video">
+                                <i class="fas fa-times"></i> Tutup
+                            </button>
+                        </div>
+                    </div>
+                </section>
             </div>
+        </main>
 
-            <!-- Video Container -->
-            <div class="video-container" id="videoContainer">
-              <div class="video-wrapper">
-                <!-- Video akan dimasukkan secara dinamis -->
-              </div>
+        <!-- Footer -->
+        <footer class="main-footer">
+            <div class="footer-container">
+                <div class="footer-grid">
+                    <div class="footer-column">
+                        <h3 class="footer-title">Kontak</h3>
+                        <ul class="contact-list">
+                            <li class="contact-item">
+                                <i class="fas fa-phone contact-icon"></i>
+                                <span class="contact-text">+62 896 5673 7562</span>
+                            </li>
+                            <li class="contact-item">
+                                <i class="fas fa-clock contact-icon"></i>
+                                <span class="contact-text">Buka: 08:00 - 20:00 WIB</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="footer-column">
+                        <h3 class="footer-title">Sosial Media</h3>
+                        <div class="social-buttons">
+                            <a href="https://www.instagram.com/kevinchandramw_" 
+                               class="social-btn instagram-btn"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               aria-label="Instagram">
+                                <i class="fab fa-instagram"></i>
+                                <span class="social-text">Instagram</span>
+                            </a>
+                            <a href="https://wa.me/+6289656737562" 
+                               class="social-btn whatsapp-btn"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               aria-label="WhatsApp">
+                                <i class="fab fa-whatsapp"></i>
+                                <span class="social-text">WhatsApp</span>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="footer-column">
+                        <h3 class="footer-title">Lokasi</h3>
+                        <div class="location-info">
+                            <i class="fas fa-map-marker-alt location-icon"></i>
+                            <p class="location-text">Pantes CitiMall Garut<br>Jl. CitiMall No. 123, Garut</p>
+                        </div>
+                    </div>
+                    
+                    <div class="footer-column">
+                        <h3 class="footer-title">Informasi</h3>
+                        <p class="footer-info">Harga emas diperbarui secara real-time setiap hari kerja.</p>
+                        <p class="copyright">© 2025 Pantes CitiMall Garut. All rights reserved.</p>
+                    </div>
+                </div>
+                
+                <div class="footer-bottom">
+                    <p class="footer-note">Website harga emas terupdate - Informasi akurat dan terpercaya</p>
+                </div>
             </div>
-          </section>
-        </div>
-      </main>
-
-      <footer class="footer">
-        <div class="container footer-container">
-          <div class="footer-section">
-            <h4>Kontak Kami</h4>
-            <ul>
-              <li><i class="fas fa-phone"></i> +62 896 5673 7562</li>
-            </ul>
-          </div>
-          <div class="footer-section">
-            <h4>Sosial Media</h4>
-            <div class="social-links">
-              <a href="https://www.instagram.com/kevinchandramw_" aria-label="Instagram">
-                <i class="fab fa-instagram"></i>
-              </a>
-              <a href="https://wa.me/+6289656737562" aria-label="WhatsApp">
-                <i class="fab fa-whatsapp"></i>
-              </a>
-            </div>
-          </div>
-          <div class="footer-section">
-            <h4>Credit</h4>
-            <p>© 2025 KEVIN PANTES BANDUNG</p>
-          </div>
-        </div>
-      </footer>
+        </footer>
     </div>
 
     <script src="script.js"></script>
-  </body>
+</body>
 </html>
