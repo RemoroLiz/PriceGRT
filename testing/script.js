@@ -17,7 +17,7 @@ const APP_CONFIG = {
     },
     rotation: {
         interval: 25000, // 25 seconds
-        types: ["emas", "antam", "archi"]
+        types: ["emas muda", "emas tua" ,"antam", "archi"]
     },
     video: {
         delayBeforeShow: 3000, // 3 seconds
@@ -31,7 +31,8 @@ const APP_CONFIG = {
 class AppState {
     constructor() {
         this.tableData = {
-            emas: [],
+            emas muda: [],
+            emas tua: [],
             antam: [],
             archi: []
         };
