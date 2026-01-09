@@ -9,7 +9,7 @@ const SHEET_CONFIG = {
 const SHEET_BASE_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZ4Jrb5j2IVmK72GbEhHoyIzck-H-khwypavvFpGD8yxetAErp-YpE6Krtu8OtuOTMYzUozy-CrAy5/pub";
 
-// State aplikasi
+// State aplikasi dengan cache
 const appState = {
   tableData: {},
   currentTableType: "emas",
@@ -21,6 +21,25 @@ const appState = {
   youtubePlayer: null,
   userInteracted: false,
   autoplayAttempted: false,
+  
+  // CACHE SYSTEM: Tambahkan properti cache
+  cache: {
+    harga: {
+      data: null,
+      lastFetch: 0,
+      expiration: 5 * 60 * 1000 // 5 menit
+    },
+    runningText: {
+      data: null,
+      lastFetch: 0,
+      expiration: 10 * 60 * 1000 // 10 menit
+    },
+    iklan: {
+      data: null,
+      lastFetch: 0,
+      expiration: 5 * 60 * 1000 // 5 menit
+    }
+  }
 };
 
 // Helper functions
@@ -30,6 +49,26 @@ function formatCurrency(amount) {
     currency: "IDR",
     minimumFractionDigits: 0,
   }).format(amount);
+}
+
+// Helper: Cek apakah cache masih valid
+function isCacheValid(cacheType) {
+  const cache = appState.cache[cacheType];
+  if (!cache || !cache.data) return false;
+  
+  const now = Date.now();
+  const timeSinceLastFetch = now - cache.lastFetch;
+  
+  return timeSinceLastFetch < cache.expiration;
+}
+
+// Helper: Update cache
+function updateCache(cacheType, data) {
+  appState.cache[cacheType] = {
+    data: data,
+    lastFetch: Date.now(),
+    expiration: appState.cache[cacheType].expiration
+  };
 }
 
 // Inisialisasi aplikasi
@@ -105,6 +144,7 @@ function loadYouTubeAPI() {
 function startRotationInterval() {
   if (appState.rotationInterval) clearInterval(appState.rotationInterval);
 
+  // INTERVAL DIPERBAIKI: Hanya untuk rotasi UI, bukan fetch data
   appState.rotationInterval = setInterval(() => {
     navigateTables("right");
   }, 25000);
@@ -123,6 +163,8 @@ function navigateTables(direction) {
   }
 
   appState.currentTableType = types[nextIndex];
+  
+  // PERBAIKAN: Tampilkan tabel dari data yang sudah ada di memori
   displayTables(appState.currentTableType);
 
   // Tampilkan video jika tipe archi dan ada iklan aktif
@@ -481,12 +523,35 @@ function hideVideo() {
   document.getElementById("tableAntam").style.display = "block";
 }
 
-// ... (Fungsi-fungsi lainnya tetap sama: loadPriceData, loadRunningText, loadAdsData, dll.)
-
-// Load data harga
+// PERBAIKAN UTAMA: Load data harga dengan caching
 async function loadPriceData() {
   try {
     console.log("Memuat data harga...");
+    
+    // PERBAIKAN: Cek cache dulu
+    if (isCacheValid('harga')) {
+      console.log("Menggunakan data harga dari cache");
+      const cachedData = appState.cache.harga.data;
+      
+      appState.tableData.emas = cachedData.filter(
+        (row) => row.tipe && row.tipe.toLowerCase() === "emas"
+      );
+      appState.tableData.antam = cachedData.filter(
+        (row) => row.tipe && row.tipe.toLowerCase() === "antam"
+      );
+      appState.tableData.archi = cachedData.filter(
+        (row) => row.tipe && row.tipe.toLowerCase() === "archi"
+      );
+
+      console.log(
+        `Data loaded from cache - Emas: ${appState.tableData.emas.length}, Antam: ${appState.tableData.antam.length}, Archi: ${appState.tableData.archi.length}`
+      );
+
+      displayTables("emas");
+      return;
+    }
+    
+    // Jika cache tidak valid, fetch dari API
     const url = `${SHEET_BASE_URL}?gid=${SHEET_CONFIG.harga.gid}&single=true&output=csv`;
     const response = await fetch(url);
 
@@ -496,7 +561,10 @@ async function loadPriceData() {
 
     const csvText = await response.text();
     const data = parseCSVToJSON(csvText);
-
+    
+    // PERBAIKAN: Simpan ke cache
+    updateCache('harga', data);
+    
     appState.tableData.emas = data.filter(
       (row) => row.tipe && row.tipe.toLowerCase() === "emas"
     );
@@ -508,20 +576,48 @@ async function loadPriceData() {
     );
 
     console.log(
-      `Data loaded - Emas: ${appState.tableData.emas.length}, Antam: ${appState.tableData.antam.length}, Archi: ${appState.tableData.archi.length}`
+      `Data loaded from API - Emas: ${appState.tableData.emas.length}, Antam: ${appState.tableData.antam.length}, Archi: ${appState.tableData.archi.length}`
     );
 
     displayTables("emas");
   } catch (error) {
     console.error("Error loading CSV data:", error);
-    showError();
+    
+    // PERBAIKAN: Coba gunakan data cache yang sudah kadaluwarsa sebagai fallback
+    if (appState.cache.harga.data) {
+      console.log("Menggunakan data cache yang kadaluwarsa sebagai fallback");
+      const cachedData = appState.cache.harga.data;
+      
+      appState.tableData.emas = cachedData.filter(
+        (row) => row.tipe && row.tipe.toLowerCase() === "emas"
+      );
+      appState.tableData.antam = cachedData.filter(
+        (row) => row.tipe && row.tipe.toLowerCase() === "antam"
+      );
+      appState.tableData.archi = cachedData.filter(
+        (row) => row.tipe && row.tipe.toLowerCase() === "archi"
+      );
+      
+      displayTables("emas");
+    } else {
+      showError();
+    }
   }
 }
 
-// Load running text
+// PERBAIKAN: Load running text dengan caching
 async function loadRunningText() {
   try {
     console.log("Memuat running text...");
+    
+    // PERBAIKAN: Cek cache dulu
+    if (isCacheValid('runningText')) {
+      console.log("Menggunakan running text dari cache");
+      const cachedData = appState.cache.runningText.data;
+      processRunningTextData(cachedData);
+      return;
+    }
+    
     const url = `${SHEET_BASE_URL}?gid=${SHEET_CONFIG.runningText.gid}&single=true&output=csv`;
     const response = await fetch(url);
 
@@ -531,19 +627,38 @@ async function loadRunningText() {
 
     const csvText = await response.text();
     const data = parseRunningTextCSV(csvText);
-
+    
+    // PERBAIKAN: Simpan ke cache
+    updateCache('runningText', data);
+    
     processRunningTextData(data);
   } catch (error) {
     console.error("Error loading running text:", error);
-    document.getElementById("marqueeText").textContent =
-      "Harga emas terkini - Informasi terupdate setiap hari";
+    
+    // PERBAIKAN: Coba gunakan data cache sebagai fallback
+    if (appState.cache.runningText.data) {
+      console.log("Menggunakan running text cache sebagai fallback");
+      processRunningTextData(appState.cache.runningText.data);
+    } else {
+      document.getElementById("marqueeText").textContent =
+        "Harga emas terkini - Informasi terupdate setiap hari";
+    }
   }
 }
 
-// Load data iklan
+// PERBAIKAN: Load data iklan dengan caching
 async function loadAdsData() {
   try {
     console.log("Memuat data iklan...");
+    
+    // PERBAIKAN: Cek cache dulu
+    if (isCacheValid('iklan')) {
+      console.log("Menggunakan data iklan dari cache");
+      appState.adsData = appState.cache.iklan.data;
+      console.log("Ads data loaded from cache:", appState.adsData.length, "iklan");
+      return;
+    }
+    
     const url = `${SHEET_BASE_URL}?gid=${SHEET_CONFIG.iklan.gid}&single=true&output=csv`;
     const response = await fetch(url);
 
@@ -552,10 +667,21 @@ async function loadAdsData() {
     }
 
     const csvText = await response.text();
-    appState.adsData = parseAdsCSV(csvText);
-    console.log("Ads data loaded:", appState.adsData.length, "iklan");
+    const data = parseAdsCSV(csvText);
+    
+    // PERBAIKAN: Simpan ke cache
+    updateCache('iklan', data);
+    
+    appState.adsData = data;
+    console.log("Ads data loaded from API:", appState.adsData.length, "iklan");
   } catch (error) {
     console.error("Error loading ads data:", error);
+    
+    // PERBAIKAN: Coba gunakan data cache sebagai fallback
+    if (appState.cache.iklan.data) {
+      console.log("Menggunakan data iklan cache sebagai fallback");
+      appState.adsData = appState.cache.iklan.data;
+    }
   }
 }
 
@@ -818,6 +944,22 @@ document.addEventListener("visibilitychange", function () {
     startRotationInterval();
   }
 });
+
+// PERBAIKAN TAMBAHAN: Fungsi untuk refresh data secara periodik
+function startPeriodicRefresh() {
+  // Refresh data setiap 5 menit
+  setInterval(() => {
+    console.log("Memperbarui data dari server...");
+    loadPriceData();
+    loadRunningText();
+    loadAdsData();
+  }, 5 * 60 * 1000); // 5 menit
+}
+
+// PERBAIKAN TAMBAHAN: Start periodic refresh setelah semua komponen siap
+setTimeout(() => {
+  startPeriodicRefresh();
+}, 10000); // Mulai setelah 10 detik
 
 // YouTube API callback global
 window.onYouTubeIframeAPIReady = function () {
