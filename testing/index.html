@@ -31,7 +31,6 @@
                 <div class="ticker-container">
                     <div class="ticker-wrapper">
                         <div class="ticker-content">
-                            <!-- MARQUEE TEXT DIKEMBALIKAN KE ELEMENT ASLI -->
                             <marquee class="ticker-text" id="marqueeText" behavior="scroll" direction="left" scrollamount="3">
                                 Memuat informasi harga emas terbaru...
                             </marquee>
@@ -49,42 +48,62 @@
         <main class="content-area">
             <div class="content-container">
                 <section class="price-display">
-                    <div class="tables-layout">
-                        <button class="scroll-btn prev-btn" aria-label="Previous Table">
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
+                    <!-- Table Navigation Tabs -->
+                    <div class="table-tabs" id="tableTabs">
+                        <button class="tab-btn active" data-type="emas-muda">Emas Muda</button>
+                        <button class="tab-btn" data-type="emas-tua">Emas Tua</button>
+                        <button class="tab-btn" data-type="antam">Antam</button>
+                        <button class="tab-btn" data-type="archi">Archie</button>
+                    </div>
 
-                        <!-- TABEL RESPONSIVE DENGAN WRAPPER BARU -->
-                        <div class="tables-responsive-wrapper">
-                            <div class="price-table-card" id="tableEmas">
-                                <div class="table-header">
-                                    <h2 class="table-title">Harga Emas</h2>
-                                </div>
-                                <div class="table-body">
-                                    <div class="table-scroll-wrapper">
-                                        <div class="table-scroll" id="priceTableLeft"></div>
-                                    </div>
-                                </div>
+                    <!-- Tables Container - RESPONSIF TANPA SCROLL -->
+                    <div class="tables-container" id="tablesContainer">
+                        <!-- Emas Muda Table -->
+                        <div class="price-table-card active" id="tableEmasMuda">
+                            <div class="table-header">
+                                <h2 class="table-title">Harga Emas Muda</h2>
+                                <div class="table-subtitle">Kadar 70% - 85%</div>
                             </div>
-
-                            <div class="price-table-card" id="tableAntam">
-                                <div class="table-header">
-                                    <h2 class="table-title">Harga Antam</h2>
-                                </div>
-                                <div class="table-body">
-                                    <div class="table-scroll-wrapper">
-                                        <div class="table-scroll" id="priceTableRight"></div>
-                                    </div>
-                                </div>
+                            <div class="table-body">
+                                <div class="table-content" id="priceTableEmasMuda"></div>
                             </div>
                         </div>
 
-                        <button class="scroll-btn next-btn" aria-label="Next Table">
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
+                        <!-- Emas Tua Table -->
+                        <div class="price-table-card" id="tableEmasTua">
+                            <div class="table-header">
+                                <h2 class="table-title">Harga Emas Tua</h2>
+                                <div class="table-subtitle">Kadar 86% - 99%</div>
+                            </div>
+                            <div class="table-body">
+                                <div class="table-content" id="priceTableEmasTua"></div>
+                            </div>
+                        </div>
+
+                        <!-- Antam Table -->
+                        <div class="price-table-card" id="tableAntam">
+                            <div class="table-header">
+                                <h2 class="table-title">Harga Antam</h2>
+                                <div class="table-subtitle">Kadar 99.99%</div>
+                            </div>
+                            <div class="table-body">
+                                <div class="table-content" id="priceTableAntam"></div>
+                            </div>
+                        </div>
+
+                        <!-- Archie Table -->
+                        <div class="price-table-card" id="tableArchie">
+                            <div class="table-header">
+                                <h2 class="table-title">Harga Archie</h2>
+                                <div class="table-subtitle">Kadar 99.99%</div>
+                            </div>
+                            <div class="table-body">
+                                <div class="table-content" id="priceTableArchie"></div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Video Ad Container - DIPERBAIKI RESPONSIVENYA -->
+                    <!-- Video Ad Container -->
                     <div class="video-ad-container" id="videoContainer">
                         <div class="video-player-wrapper">
                             <div class="video-responsive-wrapper">
@@ -113,7 +132,7 @@
             </div>
         </main>
 
-        <!-- Footer - DIPERKECIL -->
+        <!-- Footer Minimalis -->
         <footer class="main-footer">
             <div class="footer-container">
                 <div class="footer-grid">
@@ -132,43 +151,16 @@
                     </div>
                     
                     <div class="footer-column">
-                        <h3 class="footer-title">Sosial Media</h3>
-                        <div class="social-buttons">
-                            <a href="https://www.instagram.com/kevinchandramw_" 
-                               class="social-btn instagram-btn"
-                               target="_blank"
-                               rel="noopener noreferrer"
-                               aria-label="Instagram">
-                                <i class="fab fa-instagram"></i>
-                                <span class="social-text">Instagram</span>
-                            </a>
-                            <a href="https://wa.me/+6289656737562" 
-                               class="social-btn whatsapp-btn"
-                               target="_blank"
-                               rel="noopener noreferrer"
-                               aria-label="WhatsApp">
-                                <i class="fab fa-whatsapp"></i>
-                                <span class="social-text">WhatsApp</span>
-                            </a>
-                        </div>
-                    </div>
-                    
-                    <div class="footer-column">
                         <h3 class="footer-title">Lokasi</h3>
                         <div class="location-info">
                             <i class="fas fa-map-marker-alt location-icon"></i>
                             <p class="location-text">Pantes CitiMall Garut<br>Jl. CitiMall No. 123, Garut</p>
                         </div>
                     </div>
-                    
-                    <div class="footer-column">
-                        <h3 class="footer-title">Informasi</h3>
-                        <p class="footer-info">Harga emas diperbarui secara real-time setiap hari kerja.</p>
-                        <p class="copyright">© 2025 Pantes CitiMall Garut. All rights reserved.</p>
-                    </div>
                 </div>
                 
                 <div class="footer-bottom">
+                    <p class="copyright">© 2025 Pantes CitiMall Garut. All rights reserved.</p>
                     <p class="footer-note">Website harga emas terupdate - Informasi akurat dan terpercaya</p>
                 </div>
             </div>
