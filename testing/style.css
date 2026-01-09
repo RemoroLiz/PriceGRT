@@ -446,6 +446,20 @@ body {
   }
 }
 
+/* Class untuk menandai user sudah interaksi */
+.user-interacted .video-container {
+  animation: pulse-glow 2s infinite alternate;
+}
+
+@keyframes pulse-glow {
+  from {
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+  }
+  to {
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.6);
+  }
+}
+
 /* Error and Loading States */
 .error-message,
 .loading-spinner {
