@@ -117,12 +117,11 @@ function formatCurrency(amount) {
     const num = typeof amount === 'string' ? parseInt(amount.replace(/[^0-9]/g, '')) : amount;
     if (isNaN(num)) return '-';
     
+    // Format dengan separator ribuan, tanpa "Rp" di depan
     return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
-    }).format(num).replace('Rp', 'Rp ');
+    }).format(num);
 }
 
 function extractYouTubeId(url) {
@@ -176,7 +175,7 @@ async function fetchWithTimeout(url, timeout = 10000) {
 }
 
 // ============================================
-// TABLE MANAGEMENT FUNCTIONS
+// RESPONSIVE TABLE MANAGEMENT
 // ============================================
 
 function setupTableTabs() {
@@ -194,50 +193,90 @@ function setupTableTabs() {
             document.querySelectorAll('.price-table-card').forEach(card => {
                 card.classList.remove('active');
             });
-            document.getElementById(`table${type.charAt(0).toUpperCase() + type.slice(1).replace('-', '')}`)?.classList.add('active');
             
-            app.currentTableType = type;
+            const tableId = `table${type.charAt(0).toUpperCase() + type.slice(1).replace('-', '')}`;
+            const tableElement = document.getElementById(tableId);
             
-            // Adjust table for responsive
-            setTimeout(() => {
-                adjustTableResponsive();
-            }, 100);
+            if (tableElement) {
+                tableElement.classList.add('active');
+                app.currentTableType = type;
+                
+                // Adjust table for responsive setelah delay kecil
+                setTimeout(() => {
+                    adjustTableResponsive();
+                }, 50);
+            }
         });
     });
 }
 
 function adjustTableResponsive() {
-    const table = document.querySelector('.price-table-card.active .price-table');
-    if (!table) return;
+    const activeTable = document.querySelector('.price-table-card.active');
+    if (!activeTable) return;
     
-    const containerWidth = document.querySelector('.tables-container').offsetWidth;
-    const isMobile = window.innerWidth <= 480;
-    const isTablet = window.innerWidth <= 768;
+    const tables = document.querySelectorAll('.price-table');
+    const windowWidth = window.innerWidth;
     
-    // Reset table class
-    table.classList.remove('compact');
+    tables.forEach(table => {
+        // Reset semua mode responsive
+        table.classList.remove('compact-mode', 'very-compact-mode');
+        
+        // Cek lebar container tabel
+        const tableContainer = table.closest('.table-content-wrapper');
+        if (!tableContainer) return;
+        
+        const containerWidth = tableContainer.offsetWidth;
+        const tableWidth = table.offsetWidth;
+        
+        // Mode responsif berdasarkan lebar layar
+        if (windowWidth <= 360) {
+            // Mode very compact untuk HP kecil
+            table.classList.add('very-compact-mode');
+        } else if (windowWidth <= 480) {
+            // Mode compact untuk mobile
+            table.classList.add('compact-mode');
+        } else if (windowWidth <= 768) {
+            // Mode compact untuk tablet
+            table.classList.add('compact-mode');
+        }
+        
+        // Adjust font size jika masih overflow
+        adjustTableFontSize(table, containerWidth);
+    });
+}
+
+function adjustTableFontSize(table, containerWidth) {
+    const cells = table.querySelectorAll('th, td');
+    let needsAdjustment = false;
     
-    // Calculate if we need compact mode
-    const tableWidth = table.offsetWidth;
-    const containerPadding = 32; // Approximate padding
-    
-    if (isMobile) {
-        table.classList.add('compact');
-    } else if (isTablet && tableWidth > (containerWidth - containerPadding)) {
-        table.classList.add('compact');
-    }
-    
-    // Adjust font size based on container
-    const cells = table.querySelectorAll('td, th');
+    // Cek apakah ada overflow
     cells.forEach(cell => {
         if (cell.scrollWidth > cell.offsetWidth) {
-            // Text is overflowing, reduce font size slightly
-            const currentSize = parseFloat(window.getComputedStyle(cell).fontSize);
-            cell.style.fontSize = `${Math.max(currentSize - 1, 10)}px`;
-        } else {
-            cell.style.fontSize = '';
+            needsAdjustment = true;
         }
     });
+    
+    if (needsAdjustment) {
+        // Reduce font size step by step
+        let currentFontSize = parseFloat(window.getComputedStyle(table).fontSize);
+        const minFontSize = 10; // Ukuran minimum
+        
+        while (needsAdjustment && currentFontSize > minFontSize) {
+            currentFontSize -= 1;
+            table.style.fontSize = `${currentFontSize}px`;
+            
+            // Check again
+            needsAdjustment = false;
+            cells.forEach(cell => {
+                if (cell.scrollWidth > cell.offsetWidth) {
+                    needsAdjustment = true;
+                }
+            });
+        }
+    } else {
+        // Reset font size jika tidak perlu adjustment
+        table.style.fontSize = '';
+    }
 }
 
 // ============================================
@@ -487,12 +526,19 @@ function setupEventListeners() {
         });
     });
 
-    // Responsive layout
-    window.addEventListener('resize', debounce(() => {
+    // Responsive layout dengan debounce
+    const debouncedResize = debounce(() => {
         handleResponsiveLayout();
         adjustTableResponsive();
-    }, 250));
-    window.addEventListener('orientationchange', handleResponsiveLayout);
+    }, 100);
+    
+    window.addEventListener('resize', debouncedResize);
+    window.addEventListener('orientationchange', () => {
+        setTimeout(() => {
+            handleResponsiveLayout();
+            adjustTableResponsive();
+        }, 300);
+    });
 
     // Video controls
     document.addEventListener('click', function(event) {
@@ -602,15 +648,24 @@ function processPriceData(data) {
     // Filter data by type - assuming tipe column exists
     data.forEach(row => {
         const tipe = (row.tipe || '').toLowerCase().trim();
+        const kode = (row.kode || '').toLowerCase().trim();
         
-        if (tipe.includes('muda') || tipe.includes('70') || tipe.includes('75') || tipe.includes('80') || tipe.includes('85')) {
+        // Logic untuk menentukan kategori
+        if (tipe.includes('muda') || kode.includes('muda') || 
+            tipe.includes('70') || tipe.includes('75') || 
+            tipe.includes('80') || tipe.includes('85')) {
             app.tableData["emas-muda"].push(row);
-        } else if (tipe.includes('tua') || tipe.includes('86') || tipe.includes('90') || tipe.includes('95') || tipe.includes('99')) {
+        } else if (tipe.includes('tua') || kode.includes('tua') || 
+                   tipe.includes('86') || tipe.includes('90') || 
+                   tipe.includes('95') || tipe.includes('99')) {
             app.tableData["emas-tua"].push(row);
-        } else if (tipe.includes('antam')) {
+        } else if (tipe.includes('antam') || kode.includes('antam')) {
             app.tableData["antam"].push(row);
-        } else if (tipe.includes('archi')) {
+        } else if (tipe.includes('archi') || kode.includes('archi')) {
             app.tableData["archi"].push(row);
+        } else {
+            // Default ke emas tua jika tidak ada kategori
+            app.tableData["emas-tua"].push(row);
         }
     });
     
@@ -660,24 +715,26 @@ function createTableHTML(data, type) {
     });
     
     return `
-        <table class="price-table">
-            <thead>
-                <tr>
-                    <th>Kode</th>
-                    <th>Harga Jual</th>
-                    <th>Buyback</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${sortedData.map(item => `
+        <div class="responsive-table-container">
+            <table class="price-table">
+                <thead>
                     <tr>
-                        <td class="code-cell">${escapeHTML(item.kode || '-')}</td>
-                        <td class="highlight">${formatCurrency(item.harga_jual || item.harga)}</td>
-                        <td class="highlight">${formatCurrency(item.buyback)}</td>
+                        <th>Kode</th>
+                        <th>Harga Jual</th>
+                        <th>Buyback</th>
                     </tr>
-                `).join('')}
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    ${sortedData.map(item => `
+                        <tr>
+                            <td class="code-cell">${escapeHTML(item.kode || '-')}</td>
+                            <td class="highlight">${formatCurrency(item.harga_jual || item.harga)}</td>
+                            <td class="highlight">${formatCurrency(item.buyback)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
     `;
 }
 
@@ -953,24 +1010,30 @@ function showVideoError() {
 
 function handleResponsiveLayout() {
     const width = window.innerWidth;
+    const height = window.innerHeight;
     
-    console.log(`📱 Responsive: ${width}x${window.innerHeight}`);
+    console.log(`📱 Responsive: ${width}x${height}`);
     
     // Adjust table responsive
     adjustTableResponsive();
     
-    // Handle mobile menu
-    if (width <= 768) {
-        const hamburgerBtn = document.querySelector('.hamburger-btn');
-        if (hamburgerBtn) {
-            hamburgerBtn.style.display = 'flex';
-        }
-    } else {
-        const hamburgerBtn = document.querySelector('.hamburger-btn');
-        if (hamburgerBtn) {
-            hamburgerBtn.style.display = 'none';
-        }
+    // Handle mobile menu visibility
+    const hamburgerBtn = document.querySelector('.hamburger-btn');
+    if (hamburgerBtn) {
+        hamburgerBtn.style.display = width <= 768 ? 'flex' : 'none';
     }
+    
+    // Adjust container padding based on screen size
+    const containers = document.querySelectorAll('.header-container, .content-container, .footer-container');
+    containers.forEach(container => {
+        if (width <= 480) {
+            container.style.padding = '0 var(--space-sm)';
+        } else if (width <= 768) {
+            container.style.padding = '0 var(--space-md)';
+        } else {
+            container.style.padding = '0 var(--space-lg)';
+        }
+    });
 }
 
 // ============================================
@@ -1080,6 +1143,32 @@ function startPeriodicRefresh() {
 function toggleMobileMenu() {
     const header = document.querySelector('.main-header');
     header.classList.toggle('menu-open');
+    
+    // Add mobile menu styles if needed
+    if (!document.getElementById('mobileMenuStyles')) {
+        const style = document.createElement('style');
+        style.id = 'mobileMenuStyles';
+        style.textContent = `
+            @media (max-width: 768px) {
+                .main-header.menu-open .header-container {
+                    flex-direction: column;
+                    height: auto;
+                    padding: 15px;
+                }
+                
+                .main-header.menu-open .brand-logo {
+                    width: 100%;
+                    justify-content: space-between;
+                }
+                
+                .main-header.menu-open .ticker-container {
+                    margin-top: 10px;
+                    order: 3;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
 }
 
 // ============================================
