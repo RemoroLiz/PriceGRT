@@ -165,7 +165,7 @@ body {
     margin-top: 2px;
 }
 
-/* Ticker/Marquee */
+/* Ticker/Marquee - DIPERBAIKI AGAR TEXT TIDAK HILANG */
 .ticker-container {
     flex: 1;
     min-width: 0;
@@ -188,28 +188,33 @@ body {
 
 .ticker-content {
     width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
     overflow: hidden;
-    position: relative;
 }
 
 .ticker-text {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    height: 100%;
     color: var(--white);
     font-weight: 500;
     font-size: var(--font-base);
     white-space: nowrap;
-    padding-left: 100%;
-    animation: tickerScroll 40s linear infinite;
+    padding: 0 20px;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-@keyframes tickerScroll {
-    0% {
-        transform: translateX(0);
-    }
-    100% {
-        transform: translateX(-100%);
-    }
+/* MARQUEE STYLES */
+marquee.ticker-text {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    line-height: 1;
+    padding: 0;
+    margin: 0;
 }
 
 /* Hamburger Button */
@@ -241,7 +246,7 @@ body {
 .content-area {
     flex: 1;
     padding: var(--space-xl) 0;
-    min-height: calc(100vh - var(--header-height) - 200px);
+    min-height: calc(100vh - var(--header-height) - 180px);
 }
 
 .price-display {
@@ -250,13 +255,21 @@ body {
     gap: var(--space-xl);
 }
 
-/* Tables Layout */
+/* Tables Layout - DIPERBAIKI RESPONSIVENYA */
 .tables-layout {
     display: flex;
     align-items: stretch;
     gap: var(--space-lg);
     width: 100%;
     min-height: 500px;
+}
+
+.tables-responsive-wrapper {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: var(--space-lg);
+    width: 100%;
 }
 
 .scroll-btn {
@@ -289,16 +302,17 @@ body {
 
 /* Price Table Cards */
 .price-table-card {
-    flex: 1;
     background: var(--white);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-lg);
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    min-height: 500px;
+    min-height: 400px;
+    max-height: 600px;
     border: 1px solid var(--medium-gray);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    width: 100%;
 }
 
 .price-table-card:hover {
@@ -310,6 +324,7 @@ body {
     background: linear-gradient(135deg, var(--primary-gold), var(--gold-dark));
     padding: var(--space-lg);
     text-align: center;
+    flex-shrink: 0;
 }
 
 .table-title {
@@ -322,7 +337,15 @@ body {
 
 .table-body {
     flex: 1;
-    padding: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.table-scroll-wrapper {
+    flex: 1;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
 }
@@ -330,18 +353,19 @@ body {
 .table-scroll {
     flex: 1;
     overflow-x: auto;
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     border-radius: var(--radius-lg);
     background: var(--light-gray);
+    min-height: 300px;
 }
 
 /* Price Table Styles */
 .price-table {
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
+    border-collapse: collapse;
     font-size: var(--font-base);
-    min-width: 300px;
+    min-width: 100%;
     table-layout: fixed;
 }
 
@@ -354,7 +378,7 @@ body {
 .price-table th {
     background: var(--secondary-dark);
     color: var(--white);
-    padding: var(--space-lg);
+    padding: var(--space-md) var(--space-lg);
     text-align: left;
     font-weight: 600;
     font-size: var(--font-lg);
@@ -362,12 +386,16 @@ body {
     position: sticky;
     top: 0;
     z-index: 20;
+    white-space: nowrap;
 }
 
 .price-table td {
     padding: var(--space-md) var(--space-lg);
     border-bottom: 1px solid var(--medium-gray);
     transition: background-color 0.2s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .price-table tbody tr {
@@ -394,7 +422,7 @@ body {
 }
 
 /* ============================================
-   VIDEO AD CONTAINER - PROFESSIONAL REDESIGN
+   VIDEO AD CONTAINER - RESPONSIVE & UKURAN DIPERKECIL
    ============================================ */
 .video-ad-container {
     display: none;
@@ -405,7 +433,9 @@ body {
     margin-top: var(--space-xl);
     border: 2px solid var(--primary-gold);
     position: relative;
-    min-height: 400px;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .video-ad-container.active {
@@ -427,9 +457,16 @@ body {
 .video-player-wrapper {
     position: relative;
     width: 100%;
-    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
     background: var(--primary-dark);
     overflow: hidden;
+}
+
+/* Video Responsive Wrapper */
+.video-responsive-wrapper {
+    position: relative;
+    width: 100%;
+    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+    background: var(--primary-dark);
 }
 
 /* YouTube Player Container */
@@ -533,115 +570,41 @@ body {
     transform: translateY(-2px);
 }
 
-/* Interactive Play Button */
-.interactive-play-btn {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: linear-gradient(135deg, var(--primary-gold), var(--gold-dark));
-    color: var(--white);
-    border: none;
-    padding: var(--space-lg) var(--space-xxl);
-    border-radius: var(--radius-xl);
-    font-family: 'Poppins', sans-serif;
-    font-size: var(--font-lg);
-    font-weight: 700;
-    cursor: pointer;
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    box-shadow: 0 8px 32px rgba(212, 175, 55, 0.4);
-    transition: all 0.3s ease;
-    min-width: 280px;
-    text-align: center;
-    backdrop-filter: blur(4px);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-}
-
-.interactive-play-btn:hover {
-    transform: translate(-50%, -50%) scale(1.05);
-    box-shadow: 0 12px 40px rgba(212, 175, 55, 0.6);
-    background: linear-gradient(135deg, var(--gold-dark), var(--primary-gold));
-}
-
-.interactive-play-btn:active {
-    transform: translate(-50%, -50%) scale(0.98);
-}
-
-/* Video Instructions */
-.video-instruction {
-    position: absolute;
-    top: calc(50% + 80px);
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.8);
-    color: var(--white);
-    padding: var(--space-sm) var(--space-lg);
-    border-radius: var(--radius-lg);
-    font-size: var(--font-sm);
-    text-align: center;
-    z-index: 100;
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    max-width: 300px;
-    width: 90%;
-}
-
 /* ============================================
-   FOOTER - PROFESSIONAL REDESIGN (TIDAK TERPOTONG)
+   FOOTER - DIPERKECIL & MINIMALIS
    ============================================ */
 .main-footer {
     background: var(--primary-dark);
     color: var(--white);
-    padding: var(--space-xxl) 0 var(--space-lg);
+    padding: var(--space-lg) 0 var(--space-md);
     margin-top: auto;
     border-top: 3px solid var(--primary-gold);
     position: relative;
-    overflow: visible;
     width: 100%;
-}
-
-.main-footer::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--primary-gold), transparent);
 }
 
 .footer-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: var(--space-xl);
-    margin-bottom: var(--space-xl);
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--space-lg);
+    margin-bottom: var(--space-lg);
 }
 
 .footer-column {
-    padding: var(--space-lg);
-    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    transition: transform 0.3s ease;
-}
-
-.footer-column:hover {
-    transform: translateY(-5px);
-    background: rgba(255, 255, 255, 0.08);
-    border-color: var(--primary-gold);
 }
 
 .footer-title {
     color: var(--primary-gold);
-    font-size: var(--font-lg);
-    font-weight: 700;
-    margin-bottom: var(--space-lg);
-    padding-bottom: var(--space-sm);
-    border-bottom: 2px solid rgba(212, 175, 55, 0.3);
+    font-size: var(--font-base);
+    font-weight: 600;
+    margin-bottom: var(--space-sm);
+    padding-bottom: var(--space-xs);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.3);
 }
 
 /* Contact List */
@@ -652,26 +615,19 @@ body {
 .contact-item {
     display: flex;
     align-items: center;
-    gap: var(--space-md);
-    margin-bottom: var(--space-md);
-    padding: var(--space-sm);
-    border-radius: var(--radius-sm);
-    transition: background-color 0.3s ease;
-}
-
-.contact-item:hover {
-    background: rgba(255, 255, 255, 0.1);
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
 }
 
 .contact-icon {
     color: var(--primary-gold);
-    font-size: var(--font-lg);
-    width: 24px;
+    font-size: var(--font-base);
+    width: 20px;
     text-align: center;
 }
 
 .contact-text {
-    font-size: var(--font-base);
+    font-size: var(--font-sm);
     color: var(--light-gray);
 }
 
@@ -679,25 +635,26 @@ body {
 .social-buttons {
     display: flex;
     flex-direction: column;
-    gap: var(--space-md);
+    gap: var(--space-sm);
 }
 
 .social-btn {
     display: flex;
     align-items: center;
-    gap: var(--space-md);
-    padding: var(--space-md) var(--space-lg);
-    border-radius: var(--radius-lg);
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
     text-decoration: none;
     color: var(--white);
-    font-weight: 600;
-    transition: all 0.3s ease;
+    font-weight: 500;
+    font-size: var(--font-sm);
+    transition: all 0.2s ease;
     border: 1px solid rgba(255, 255, 255, 0.2);
     background: rgba(255, 255, 255, 0.05);
 }
 
 .social-btn:hover {
-    transform: translateX(5px);
+    transform: translateX(3px);
     border-color: var(--primary-gold);
 }
 
@@ -710,58 +667,58 @@ body {
 }
 
 .social-btn i {
-    font-size: var(--font-xl);
-    width: 24px;
+    font-size: var(--font-lg);
+    width: 20px;
 }
 
 /* Location Info */
 .location-info {
     display: flex;
     align-items: flex-start;
-    gap: var(--space-md);
-    padding: var(--space-md);
+    gap: var(--space-sm);
+    padding: var(--space-sm);
     background: rgba(255, 255, 255, 0.05);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .location-icon {
     color: var(--primary-gold);
-    font-size: var(--font-xl);
+    font-size: var(--font-base);
     margin-top: 2px;
 }
 
 .location-text {
-    font-size: var(--font-base);
+    font-size: var(--font-sm);
     color: var(--light-gray);
-    line-height: 1.6;
+    line-height: 1.5;
 }
 
 /* Footer Info & Copyright */
 .footer-info {
-    font-size: var(--font-sm);
+    font-size: var(--font-xs);
     color: var(--dark-gray);
-    line-height: 1.6;
-    margin-bottom: var(--space-md);
+    line-height: 1.5;
+    margin-bottom: var(--space-sm);
 }
 
 .copyright {
-    font-size: var(--font-sm);
+    font-size: var(--font-xs);
     color: var(--dark-gray);
-    padding-top: var(--space-md);
+    padding-top: var(--space-sm);
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Footer Bottom */
 .footer-bottom {
     text-align: center;
-    padding-top: var(--space-lg);
+    padding-top: var(--space-md);
     border-top: 1px solid rgba(255, 255, 255, 0.1);
-    margin-top: var(--space-xl);
+    margin-top: var(--space-lg);
 }
 
 .footer-note {
-    font-size: var(--font-sm);
+    font-size: var(--font-xs);
     color: var(--dark-gray);
     font-style: italic;
 }
@@ -843,7 +800,7 @@ body {
     }
     
     .price-table-card {
-        min-height: 600px;
+        min-height: 500px;
     }
 }
 
@@ -853,28 +810,32 @@ body {
         gap: var(--space-md);
     }
     
+    .tables-responsive-wrapper {
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    }
+    
     .price-table th,
     .price-table td {
-        padding: var(--space-md);
+        padding: var(--space-sm) var(--space-md);
     }
 }
 
 /* Tablet Landscape */
 @media (max-width: 1024px) and (orientation: landscape) {
-    .tables-layout {
-        min-height: 400px;
+    .tables-responsive-wrapper {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     }
     
     .price-table-card {
-        min-height: 400px;
+        min-height: 350px;
     }
     
     .table-scroll {
-        max-height: 300px;
+        max-height: 250px;
     }
     
     .main-footer {
-        padding: var(--space-xl) 0 var(--space-lg);
+        padding: var(--space-lg) 0 var(--space-md);
     }
 }
 
@@ -903,7 +864,6 @@ body {
     
     .ticker-text {
         font-size: var(--font-sm);
-        animation-duration: 30s;
     }
     
     .tables-layout {
@@ -915,24 +875,25 @@ body {
         display: none;
     }
     
+    .tables-responsive-wrapper {
+        grid-template-columns: 1fr;
+        gap: var(--space-lg);
+    }
+    
     .price-table-card {
-        min-height: 400px;
+        min-height: 350px;
         width: 100%;
     }
     
     .footer-grid {
         grid-template-columns: repeat(2, 1fr);
-        gap: var(--space-lg);
+        gap: var(--space-md);
     }
     
     .video-ad-container {
-        min-height: 300px;
-    }
-    
-    .interactive-play-btn {
-        min-width: 250px;
-        padding: var(--space-md) var(--space-xl);
-        font-size: var(--font-base);
+        max-width: 100%;
+        margin-left: 0;
+        margin-right: 0;
     }
 }
 
@@ -965,7 +926,6 @@ body {
     
     .ticker-text {
         font-size: var(--font-xs);
-        animation-duration: 25s;
     }
     
     .table-title {
@@ -974,12 +934,12 @@ body {
     
     .price-table {
         font-size: var(--font-sm);
-        min-width: 280px;
     }
     
     .price-table th,
     .price-table td {
-        padding: var(--space-sm) var(--space-md);
+        padding: var(--space-xs) var(--space-sm);
+        font-size: var(--font-xs);
     }
     
     .price-table .highlight {
@@ -991,7 +951,7 @@ body {
     }
     
     .footer-column {
-        padding: var(--space-md);
+        padding: var(--space-sm);
     }
     
     .social-buttons {
@@ -1001,7 +961,7 @@ body {
     
     .social-btn {
         flex: 1;
-        min-width: 140px;
+        min-width: 120px;
         justify-content: center;
     }
     
@@ -1012,8 +972,10 @@ body {
     
     .control-btn {
         flex: 1;
-        min-width: 120px;
+        min-width: 100px;
         justify-content: center;
+        font-size: var(--font-sm);
+        padding: var(--space-xs) var(--space-sm);
     }
 }
 
@@ -1031,20 +993,14 @@ body {
         font-size: var(--font-xs);
     }
     
-    .interactive-play-btn {
-        min-width: 200px;
-        padding: var(--space-sm) var(--space-lg);
-        font-size: var(--font-sm);
-    }
-    
     .social-btn {
-        min-width: 120px;
+        min-width: 100px;
     }
     
     .control-btn {
-        min-width: 100px;
-        font-size: var(--font-sm);
-        padding: var(--space-xs) var(--space-md);
+        min-width: 80px;
+        font-size: var(--font-xs);
+        padding: var(--space-xs) var(--space-sm);
     }
 }
 
@@ -1075,7 +1031,7 @@ body {
     }
     
     .main-footer {
-        padding: var(--space-xxl) 0 var(--space-xl);
+        padding: var(--space-xl) 0 var(--space-lg);
     }
 }
 
@@ -1149,11 +1105,10 @@ body {
     
     .ticker-text {
         animation: none;
-        padding-left: 0;
         text-align: center;
     }
     
-    .interactive-play-btn:hover,
+    .video-ad-container.active,
     .scroll-btn:hover,
     .footer-column:hover,
     .social-btn:hover {
