@@ -1,5 +1,5 @@
 /* ============================================
-   RESET & BASE STYLES
+   RESET & BASE STYLES - TAMBAHAN ANTI ZOOM
    ============================================ */
 :root {
     /* Color Palette */
@@ -53,7 +53,7 @@
     --container-max: 1400px;
 }
 
-/* Reset */
+/* Reset & Anti-Zoom */
 * {
     margin: 0;
     padding: 0;
@@ -61,6 +61,22 @@
     -webkit-tap-highlight-color: transparent;
 }
 
+/* MENCEGAH ZOOM PADA INPUT */
+input, select, textarea {
+    font-size: 16px !important; /* Mencegah zoom di iOS */
+    max-height: 3em;
+}
+
+/* MENCEGAH DOUBLE TAP ZOOM */
+html, body {
+    touch-action: manipulation; /* Mencegah double-tap zoom */
+    -webkit-text-size-adjust: 100%; /* Mencegah text zoom */
+    text-size-adjust: 100%;
+    height: 100%;
+    overflow-x: hidden;
+}
+
+/* GLOBAL STYLES */
 html {
     font-size: 16px;
     scroll-behavior: smooth;
@@ -252,6 +268,14 @@ body {
     padding-bottom: var(--space-sm);
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    position: sticky;
+    top: calc(var(--header-height) + var(--space-sm));
+    background: var(--light-gray);
+    z-index: 100;
+    padding: var(--space-sm) 0;
+    margin: 0 calc(-1 * var(--space-lg));
+    padding-left: var(--space-lg);
+    padding-right: var(--space-lg);
 }
 
 .table-tabs::-webkit-scrollbar {
@@ -288,7 +312,7 @@ body {
 /* Tables Container */
 .tables-container {
     position: relative;
-    min-height: 500px;
+    min-height: 400px;
 }
 
 .price-table-card {
@@ -354,64 +378,100 @@ body {
     min-height: 0;
 }
 
+.table-content-wrapper {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
 .table-content {
     flex: 1;
     padding: var(--space-md);
-    overflow: hidden;
+    overflow-y: auto;
+    max-height: 400px;
 }
 
-/* RESPONSIVE TABLE STYLES - TANPA SCROLL HORIZONTAL */
+/* ============================================
+   RESPONSIVE TABLE STYLES - TANPA SCROLL HORIZONTAL
+   ============================================ */
+
+/* Container untuk tabel responsif */
+.responsive-table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Hapus overflow untuk desktop */
+@media (min-width: 769px) {
+    .responsive-table-container {
+        overflow-x: visible;
+    }
+}
+
+/* Style untuk tabel responsif */
 .price-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: var(--font-base);
-    table-layout: fixed;
+    font-size: var(--font-sm);
+    min-width: 100%; /* Pastikan tabel mengambil lebar penuh */
 }
 
+/* Header tabel responsif */
 .price-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
     background: var(--secondary-dark);
 }
 
 .price-table th {
     color: var(--white);
-    padding: var(--space-md);
+    padding: var(--space-sm);
     text-align: left;
     font-weight: 600;
-    font-size: var(--font-base);
+    font-size: var(--font-sm);
     border-bottom: 3px solid var(--primary-gold);
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    position: sticky;
+    top: 0;
+    z-index: 20;
 }
 
-/* Atur lebar kolom untuk responsif */
+/* Kolom responsif dengan lebar minimum */
 .price-table th:nth-child(1),
 .price-table td:nth-child(1) {
-    width: 30%; /* Kode */
     min-width: 100px;
+    max-width: 120px;
+    width: 30%;
 }
 
 .price-table th:nth-child(2),
 .price-table td:nth-child(2) {
-    width: 35%; /* Harga Jual */
-    min-width: 150px;
+    min-width: 120px;
+    max-width: 150px;
+    width: 35%;
 }
 
 .price-table th:nth-child(3),
 .price-table td:nth-child(3) {
-    width: 35%; /* Buyback */
-    min-width: 150px;
+    min-width: 120px;
+    max-width: 150px;
+    width: 35%;
 }
 
+/* Cell styling */
 .price-table td {
-    padding: var(--space-md);
+    padding: var(--space-sm);
     border-bottom: 1px solid var(--medium-gray);
     transition: background-color 0.2s ease;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
 }
 
+/* Row styling */
 .price-table tbody tr {
     background: var(--white);
 }
@@ -427,7 +487,7 @@ body {
 .price-table .highlight {
     color: var(--primary-gold);
     font-weight: 700;
-    font-size: var(--font-base);
+    font-size: var(--font-sm);
 }
 
 .price-table .code-cell {
@@ -435,15 +495,71 @@ body {
     color: var(--text-dark);
 }
 
-/* Compact table style for mobile */
-.price-table.compact th,
-.price-table.compact td {
-    padding: var(--space-sm);
-    font-size: var(--font-sm);
+/* ============================================
+   STYLE UNTUK TABEL KOMPAK (MOBILE)
+   ============================================ */
+
+/* Compact mode untuk layar kecil */
+.price-table.compact-mode th,
+.price-table.compact-mode td {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--font-xs);
 }
 
-.price-table.compact .highlight {
-    font-size: var(--font-sm);
+.price-table.compact-mode .highlight {
+    font-size: var(--font-xs);
+}
+
+.price-table.compact-mode th:nth-child(1),
+.price-table.compact-mode td:nth-child(1) {
+    min-width: 80px;
+    max-width: 100px;
+    width: 25%;
+}
+
+.price-table.compact-mode th:nth-child(2),
+.price-table.compact-mode td:nth-child(2) {
+    min-width: 100px;
+    max-width: 120px;
+    width: 37.5%;
+}
+
+.price-table.compact-mode th:nth-child(3),
+.price-table.compact-mode td:nth-child(3) {
+    min-width: 100px;
+    max-width: 120px;
+    width: 37.5%;
+}
+
+/* ============================================
+   STYLE UNTUK VERY COMPACT (HP KECIL)
+   ============================================ */
+
+.price-table.very-compact-mode th,
+.price-table.very-compact-mode td {
+    padding: 4px 6px;
+    font-size: 11px;
+}
+
+.price-table.very-compact-mode th:nth-child(1),
+.price-table.very-compact-mode td:nth-child(1) {
+    min-width: 60px;
+    max-width: 80px;
+    width: 25%;
+}
+
+.price-table.very-compact-mode th:nth-child(2),
+.price-table.very-compact-mode td:nth-child(2) {
+    min-width: 80px;
+    max-width: 100px;
+    width: 37.5%;
+}
+
+.price-table.very-compact-mode th:nth-child(3),
+.price-table.very-compact-mode td:nth-child(3) {
+    min-width: 80px;
+    max-width: 100px;
+    width: 37.5%;
 }
 
 /* ============================================
@@ -739,46 +855,55 @@ body {
 }
 
 /* ============================================
-   RESPONSIVE DESIGN
+   RESPONSIVE BREAKPOINTS
    ============================================ */
 
-/* Desktop Large */
+/* Desktop Large (1200px+) */
 @media (min-width: 1200px) {
     .price-table {
-        font-size: var(--font-lg);
+        font-size: var(--font-base);
     }
     
     .price-table th,
     .price-table td {
-        padding: var(--space-md) var(--space-lg);
+        padding: var(--space-md);
+    }
+    
+    .price-table th:nth-child(1),
+    .price-table td:nth-child(1) {
+        min-width: 120px;
+        max-width: 150px;
+    }
+    
+    .price-table th:nth-child(2),
+    .price-table td:nth-child(2) {
+        min-width: 150px;
+        max-width: 180px;
+    }
+    
+    .price-table th:nth-child(3),
+    .price-table td:nth-child(3) {
+        min-width: 150px;
+        max-width: 180px;
     }
 }
 
-/* Tablet Landscape */
+/* Tablet Landscape (1024px) */
 @media (max-width: 1024px) and (orientation: landscape) {
     .content-area {
         padding: var(--space-md) 0;
     }
     
     .price-table-card {
-        min-height: 400px;
+        min-height: 350px;
     }
     
     .table-content {
-        padding: var(--space-sm);
-    }
-    
-    .price-table {
-        font-size: var(--font-sm);
-    }
-    
-    .price-table th,
-    .price-table td {
-        padding: var(--space-sm);
+        max-height: 300px;
     }
 }
 
-/* Tablet Portrait */
+/* Tablet Portrait (768px) */
 @media (max-width: 768px) {
     .header-container {
         flex-wrap: wrap;
@@ -810,7 +935,9 @@ body {
     }
     
     .table-tabs {
-        gap: var(--space-xs);
+        top: calc(var(--header-height) + var(--space-xs));
+        padding: var(--space-xs) var(--space-lg);
+        margin: 0 calc(-1 * var(--space-md));
     }
     
     .tab-btn {
@@ -818,6 +945,7 @@ body {
         font-size: var(--font-xs);
         flex: 1;
         text-align: center;
+        min-width: 120px;
     }
     
     .table-title {
@@ -830,34 +958,16 @@ body {
     
     .table-content {
         padding: var(--space-sm);
+        max-height: 350px;
     }
     
-    /* Responsive table adjustments */
+    /* Aktifkan mode compact untuk tablet */
     .price-table {
-        font-size: var(--font-sm);
+        font-size: var(--font-xs);
     }
     
-    .price-table th,
-    .price-table td {
-        padding: var(--space-xs) var(--space-sm);
-    }
-    
-    .price-table th:nth-child(1),
-    .price-table td:nth-child(1) {
-        width: 25%;
-        min-width: 80px;
-    }
-    
-    .price-table th:nth-child(2),
-    .price-table td:nth-child(2) {
-        width: 37.5%;
-        min-width: 120px;
-    }
-    
-    .price-table th:nth-child(3),
-    .price-table td:nth-child(3) {
-        width: 37.5%;
-        min-width: 120px;
+    .price-table.compact-mode {
+        font-size: var(--font-xs);
     }
     
     .footer-grid {
@@ -871,7 +981,7 @@ body {
     }
 }
 
-/* Mobile */
+/* Mobile (480px) */
 @media (max-width: 480px) {
     :root {
         --header-height: 60px;
@@ -903,32 +1013,14 @@ body {
         padding: var(--space-xs) 0;
     }
     
-    /* Compact table for small screens */
-    .price-table.compact {
-        font-size: var(--font-xs);
-    }
-    
-    .price-table.compact th,
-    .price-table.compact td {
+    .table-content {
+        max-height: 300px;
         padding: var(--space-xs);
     }
     
-    .price-table.compact th:nth-child(1),
-    .price-table.compact td:nth-child(1) {
-        width: 20%;
-        min-width: 60px;
-    }
-    
-    .price-table.compact th:nth-child(2),
-    .price-table.compact td:nth-child(2) {
-        width: 40%;
-        min-width: 100px;
-    }
-    
-    .price-table.compact th:nth-child(3),
-    .price-table.compact td:nth-child(3) {
-        width: 40%;
-        min-width: 100px;
+    /* Aktifkan mode very compact untuk mobile kecil */
+    .price-table.very-compact-mode {
+        font-size: 11px;
     }
     
     .video-controls-panel {
@@ -946,99 +1038,11 @@ body {
     }
 }
 
-/* Very Small Mobile */
+/* Very Small Mobile (360px) */
 @media (max-width: 360px) {
     .brand-name {
         font-size: var(--font-base);
     }
     
     .tab-btn {
-        font-size: 0.7rem;
-        padding: var(--space-xs) var(--space-sm);
-    }
-    
-    .table-title {
-        font-size: var(--font-sm);
-    }
-    
-    .price-table {
-        font-size: var(--font-xs);
-    }
-    
-    .control-btn {
-        min-width: 80px;
-        font-size: 0.7rem;
-    }
-}
-
-/* TV & Large Screen */
-@media (min-width: 1921px) {
-    :root {
-        --container-max: 1600px;
-        --font-base: 1.125rem;
-        --font-lg: 1.375rem;
-        --font-xl: 1.5rem;
-        --font-xxl: 1.75rem;
-        --font-xxxl: 2.5rem;
-    }
-    
-    .price-table {
-        font-size: var(--font-lg);
-    }
-    
-    .price-table th,
-    .price-table td {
-        padding: var(--space-lg);
-    }
-}
-
-/* Print Styles */
-@media print {
-    .main-header,
-    .video-ad-container,
-    .table-tabs,
-    .tab-btn:not(.active),
-    .hamburger-btn {
-        display: none !important;
-    }
-    
-    body {
-        background: white !important;
-        color: black !important;
-        font-size: 12pt !important;
-    }
-    
-    .price-table-card.active {
-        display: flex !important;
-        box-shadow: none !important;
-        border: 2px solid #ddd !important;
-        break-inside: avoid;
-    }
-    
-    .main-footer {
-        background: white !important;
-        color: black !important;
-        border-top: 2px solid #ddd !important;
-    }
-}
-
-/* Reduced Motion */
-@media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-    }
-    
-    .price-table-card.active {
-        animation: none;
-    }
-    
-    .tab-btn:hover,
-    .control-btn:hover,
-    .price-table-card:hover {
-        transform: none;
-    }
-}
+        font-size: 
