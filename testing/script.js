@@ -15,10 +15,6 @@ const APP_CONFIG = {
         runningText: { duration: 10 * 60 * 1000 }, // 10 minutes
         iklan: { duration: 5 * 60 * 1000 } // 5 minutes
     },
-    rotation: {
-        interval: 25000, // 25 seconds
-        types: ["emas muda", "emas tua" ,"antam", "archi"]
-    },
     video: {
         delayBeforeShow: 3000, // 3 seconds
         autoplayTimeout: 1000 // 1 second
@@ -31,13 +27,12 @@ const APP_CONFIG = {
 class AppState {
     constructor() {
         this.tableData = {
-            emas muda: [],
-            emas tua: [],
-            antam: [],
-            archi: []
+            "emas-muda": [],
+            "emas-tua": [],
+            "antam": [],
+            "archi": []
         };
-        this.currentTableType = "emas";
-        this.rotationInterval = null;
+        this.currentTableType = "emas-muda";
         this.adsData = [];
         this.currentVideoIndex = 0;
         this.videoPlayed = false;
@@ -113,7 +108,7 @@ class AppState {
 const app = new AppState();
 
 // ============================================
-// UTILITY FUNCTIONS (DEFINE FIRST)
+// UTILITY FUNCTIONS
 // ============================================
 
 function formatCurrency(amount) {
@@ -127,7 +122,7 @@ function formatCurrency(amount) {
         currency: 'IDR',
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
-    }).format(num);
+    }).format(num).replace('Rp', 'Rp ');
 }
 
 function extractYouTubeId(url) {
@@ -181,7 +176,72 @@ async function fetchWithTimeout(url, timeout = 10000) {
 }
 
 // ============================================
-// VIDEO FUNCTIONS (DEFINE BEFORE USE)
+// TABLE MANAGEMENT FUNCTIONS
+// ============================================
+
+function setupTableTabs() {
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const type = button.getAttribute('data-type');
+            
+            // Update active tab
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            
+            // Update active table
+            document.querySelectorAll('.price-table-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            document.getElementById(`table${type.charAt(0).toUpperCase() + type.slice(1).replace('-', '')}`)?.classList.add('active');
+            
+            app.currentTableType = type;
+            
+            // Adjust table for responsive
+            setTimeout(() => {
+                adjustTableResponsive();
+            }, 100);
+        });
+    });
+}
+
+function adjustTableResponsive() {
+    const table = document.querySelector('.price-table-card.active .price-table');
+    if (!table) return;
+    
+    const containerWidth = document.querySelector('.tables-container').offsetWidth;
+    const isMobile = window.innerWidth <= 480;
+    const isTablet = window.innerWidth <= 768;
+    
+    // Reset table class
+    table.classList.remove('compact');
+    
+    // Calculate if we need compact mode
+    const tableWidth = table.offsetWidth;
+    const containerPadding = 32; // Approximate padding
+    
+    if (isMobile) {
+        table.classList.add('compact');
+    } else if (isTablet && tableWidth > (containerWidth - containerPadding)) {
+        table.classList.add('compact');
+    }
+    
+    // Adjust font size based on container
+    const cells = table.querySelectorAll('td, th');
+    cells.forEach(cell => {
+        if (cell.scrollWidth > cell.offsetWidth) {
+            // Text is overflowing, reduce font size slightly
+            const currentSize = parseFloat(window.getComputedStyle(cell).fontSize);
+            cell.style.fontSize = `${Math.max(currentSize - 1, 10)}px`;
+        } else {
+            cell.style.fontSize = '';
+        }
+    });
+}
+
+// ============================================
+// VIDEO FUNCTIONS
 // ============================================
 
 function playNextVideo() {
@@ -229,6 +289,7 @@ function hideVideo() {
     
     videoContainer.classList.remove('active');
     
+    // Show tables again
     document.querySelectorAll('.price-table-card').forEach(card => {
         card.style.display = 'flex';
     });
@@ -394,14 +455,11 @@ function initializeApplication() {
         // Setup UI event listeners
         setupEventListeners();
         
-        // Setup navigation controls
-        setupNavigation();
+        // Setup table tabs
+        setupTableTabs();
         
         // Load initial data
         loadAllData();
-        
-        // Start table rotation
-        startTableRotation();
         
         // Load YouTube API
         loadYouTubeAPI();
@@ -430,48 +488,35 @@ function setupEventListeners() {
     });
 
     // Responsive layout
-    window.addEventListener('resize', debounce(handleResponsiveLayout, 250));
+    window.addEventListener('resize', debounce(() => {
+        handleResponsiveLayout();
+        adjustTableResponsive();
+    }, 250));
     window.addEventListener('orientationchange', handleResponsiveLayout);
 
-    // Video controls - Menggunakan event delegation
+    // Video controls
     document.addEventListener('click', function(event) {
         const target = event.target;
         
-        // Handle mute button
         if (target.closest('#muteBtn')) {
             toggleVideoMute();
             return;
         }
         
-        // Handle skip button
         if (target.closest('#skipBtn')) {
             playNextVideo();
             return;
         }
         
-        // Handle close video button
         if (target.closest('#closeVideoBtn')) {
             hideVideo();
             return;
         }
         
-        // Handle menu toggle
         if (target.closest('#menuToggle')) {
             toggleMobileMenu();
             return;
         }
-    });
-}
-
-function setupNavigation() {
-    document.querySelector('.prev-btn')?.addEventListener('click', () => {
-        app.setUserInteracted();
-        navigateTables('left');
-    });
-    
-    document.querySelector('.next-btn')?.addEventListener('click', () => {
-        app.setUserInteracted();
-        navigateTables('right');
     });
 }
 
@@ -535,8 +580,7 @@ async function loadPriceData() {
             console.log('⚠️ Using expired cache as fallback');
             processPriceData(cachedData);
         } else {
-            showErrorState('priceTableLeft', 'Gagal memuat data harga');
-            showErrorState('priceTableRight', 'Gagal memuat data harga');
+            showErrorState('priceTableEmasMuda', 'Gagal memuat data harga');
         }
     }
 }
@@ -547,24 +591,104 @@ function processPriceData(data) {
         return;
     }
     
-    // Filter data by type
-    app.tableData.emas = data.filter(row => 
-        row.tipe?.toLowerCase() === "emas"
-    );
-    app.tableData.antam = data.filter(row => 
-        row.tipe?.toLowerCase() === "antam"
-    );
-    app.tableData.archi = data.filter(row => 
-        row.tipe?.toLowerCase() === "archi"
-    );
+    // Reset all table data
+    app.tableData = {
+        "emas-muda": [],
+        "emas-tua": [],
+        "antam": [],
+        "archi": []
+    };
     
-    console.log(`📊 Processed: Emas(${app.tableData.emas.length}), Antam(${app.tableData.antam.length}), Archi(${app.tableData.archi.length})`);
+    // Filter data by type - assuming tipe column exists
+    data.forEach(row => {
+        const tipe = (row.tipe || '').toLowerCase().trim();
+        
+        if (tipe.includes('muda') || tipe.includes('70') || tipe.includes('75') || tipe.includes('80') || tipe.includes('85')) {
+            app.tableData["emas-muda"].push(row);
+        } else if (tipe.includes('tua') || tipe.includes('86') || tipe.includes('90') || tipe.includes('95') || tipe.includes('99')) {
+            app.tableData["emas-tua"].push(row);
+        } else if (tipe.includes('antam')) {
+            app.tableData["antam"].push(row);
+        } else if (tipe.includes('archi')) {
+            app.tableData["archi"].push(row);
+        }
+    });
     
-    // Display current table
-    displayTables(app.currentTableType);
+    console.log(`📊 Processed: Emas Muda(${app.tableData["emas-muda"].length}), Emas Tua(${app.tableData["emas-tua"].length}), Antam(${app.tableData["antam"].length}), Archie(${app.tableData["archi"].length})`);
     
-    // Update responsive layout
-    setTimeout(handleResponsiveLayout, 100);
+    // Display all tables
+    displayAllTables();
+    
+    // Adjust responsive layout
+    setTimeout(() => {
+        adjustTableResponsive();
+    }, 100);
+}
+
+function displayAllTables() {
+    // Update all tables
+    Object.keys(app.tableData).forEach(type => {
+        const elementId = `priceTable${type.charAt(0).toUpperCase() + type.slice(1).replace('-', '')}`;
+        const data = app.tableData[type];
+        updateTable(elementId, data, type);
+    });
+}
+
+function updateTable(elementId, data, type) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    if (!data || data.length === 0) {
+        element.innerHTML = createNoDataHTML();
+        return;
+    }
+    
+    element.innerHTML = createTableHTML(data, type);
+    
+    // Adjust table after rendering
+    setTimeout(() => {
+        adjustTableResponsive();
+    }, 50);
+}
+
+function createTableHTML(data, type) {
+    // Sort data by kode if available
+    const sortedData = [...data].sort((a, b) => {
+        const kodeA = (a.kode || '').toLowerCase();
+        const kodeB = (b.kode || '').toLowerCase();
+        return kodeA.localeCompare(kodeB);
+    });
+    
+    return `
+        <table class="price-table">
+            <thead>
+                <tr>
+                    <th>Kode</th>
+                    <th>Harga Jual</th>
+                    <th>Buyback</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${sortedData.map(item => `
+                    <tr>
+                        <td class="code-cell">${escapeHTML(item.kode || '-')}</td>
+                        <td class="highlight">${formatCurrency(item.harga_jual || item.harga)}</td>
+                        <td class="highlight">${formatCurrency(item.buyback)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function createNoDataHTML() {
+    return `
+        <div class="no-data-message">
+            <i class="fas fa-database" style="font-size: 48px; margin-bottom: 20px; color: var(--dark-gray);"></i>
+            <h3 style="margin-bottom: 10px; color: var(--text-dark);">Data Tidak Tersedia</h3>
+            <p style="color: var(--text-light);">Tidak ada data untuk ditampilkan</p>
+        </div>
+    `;
 }
 
 async function loadRunningText() {
@@ -601,6 +725,32 @@ async function loadRunningText() {
     }
 }
 
+function updateRunningText(data) {
+    const marqueeElement = document.getElementById('marqueeText');
+    if (!marqueeElement) return;
+    
+    if (!data || !Array.isArray(data) || data.length === 0) {
+        marqueeElement.innerHTML = "Harga emas terkini - Informasi terupdate setiap hari";
+        return;
+    }
+    
+    const texts = data
+        .map(item => item.teks?.trim())
+        .filter(text => text && text.length > 0);
+    
+    if (texts.length === 0) {
+        marqueeElement.innerHTML = "Harga emas terkini - Informasi terupdate setiap hari";
+        return;
+    }
+    
+    const combinedText = texts.join(' • ');
+    marqueeElement.innerHTML = escapeHTML(combinedText);
+    
+    // Adjust marquee speed
+    const speed = Math.max(2, Math.min(5, Math.floor(150 / combinedText.length)));
+    marqueeElement.setAttribute('scrollamount', speed);
+}
+
 async function loadAdsData() {
     try {
         console.log('🎬 Loading ads data...');
@@ -630,115 +780,6 @@ async function loadAdsData() {
             app.adsData = cachedData;
         }
     }
-}
-
-// ============================================
-// UI COMPONENTS & DISPLAY
-// ============================================
-
-function displayTables(type) {
-    const data = app.tableData[type];
-    
-    if (!data || data.length === 0) {
-        showNoDataState();
-        return;
-    }
-    
-    // Update table titles
-    updateTableTitles(type);
-    
-    // Split data for two tables
-    const half = Math.ceil(data.length / 2);
-    const leftData = data.slice(0, half);
-    const rightData = data.slice(half);
-    
-    // Update both tables
-    updateTable('priceTableLeft', leftData);
-    updateTable('priceTableRight', rightData);
-}
-
-function updateTableTitles(type) {
-    const titles = {
-        emas: 'Harga Emas',
-        antam: 'Harga Antam', 
-        archi: 'Harga Archi'
-    };
-    
-    document.querySelectorAll('.table-title').forEach(title => {
-        title.textContent = titles[type] || 'Harga Emas';
-    });
-}
-
-function updateTable(elementId, data) {
-    const element = document.getElementById(elementId);
-    if (!element) return;
-    
-    if (!data || data.length === 0) {
-        element.innerHTML = createNoDataHTML();
-        return;
-    }
-    
-    element.innerHTML = createTableHTML(data);
-}
-
-function createTableHTML(data) {
-    return `
-        <table class="price-table">
-            <thead>
-                <tr>
-                    <th style="width: 30%;">Kode</th>
-                    <th style="width: 35%;">Harga Jual</th>
-                    <th style="width: 35%;">Buyback</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${data.map(item => `
-                    <tr>
-                        <td class="code-cell">${escapeHTML(item.kode || '-')}</td>
-                        <td class="highlight">${formatCurrency(item.harga_jual)}</td>
-                        <td class="highlight">${formatCurrency(item.buyback)}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
-}
-
-function createNoDataHTML() {
-    return `
-        <div class="no-data-message">
-            <i class="fas fa-database" style="font-size: 48px; margin-bottom: 20px; color: var(--dark-gray);"></i>
-            <h3 style="margin-bottom: 10px; color: var(--text-dark);">Data Tidak Tersedia</h3>
-            <p style="color: var(--text-light);">Tidak ada data harga emas untuk ditampilkan</p>
-        </div>
-    `;
-}
-
-function updateRunningText(data) {
-    const marqueeElement = document.getElementById('marqueeText');
-    if (!marqueeElement) return;
-    
-    if (!data || !Array.isArray(data) || data.length === 0) {
-        marqueeElement.innerHTML = "Harga emas terkini - Informasi terupdate setiap hari";
-        return;
-    }
-    
-    const texts = data
-        .map(item => item.teks?.trim())
-        .filter(text => text && text.length > 0);
-    
-    if (texts.length === 0) {
-        marqueeElement.innerHTML = "Harga emas terkini - Informasi terupdate setiap hari";
-        return;
-    }
-    
-    // Gunakan innerHTML agar marquee tag berfungsi dengan benar
-    const combinedText = texts.join(' • ');
-    marqueeElement.innerHTML = escapeHTML(combinedText);
-    
-    // Atur speed marquee berdasarkan panjang teks
-    const speed = Math.max(3, Math.min(10, Math.floor(200 / combinedText.length)));
-    marqueeElement.setAttribute('scrollamount', speed);
 }
 
 // ============================================
@@ -833,17 +874,6 @@ function onPlayerReady(event) {
 }
 
 function onPlayerStateChange(event) {
-    const states = {
-        '-1': 'UNSTARTED',
-        '0': 'ENDED',
-        '1': 'PLAYING',
-        '2': 'PAUSED',
-        '3': 'BUFFERING',
-        '5': 'CUED'
-    };
-    
-    console.log(`🎬 Player state: ${states[event.data] || event.data}`);
-    
     if (event.data === YT.PlayerState.ENDED) {
         console.log('Video ended, playing next...');
         playNextVideo();
@@ -878,7 +908,6 @@ function attemptSmartAutoplay(player) {
     app.autoplayAttempted = true;
     
     if (app.userInteracted) {
-        // User has interacted, try unmuted autoplay
         console.log('👤 User interacted, attempting unmuted autoplay...');
         try {
             player.unMute();
@@ -887,166 +916,18 @@ function attemptSmartAutoplay(player) {
             console.log('✅ Unmuted autoplay successful');
         } catch (error) {
             console.log('❌ Unmuted autoplay failed:', error);
-            showInteractivePlayButton();
         }
     } else {
-        // Start with muted autoplay (usually allowed)
         console.log('🔇 Starting with muted autoplay...');
         try {
             player.mute();
             player.playVideo();
             app.isVideoMuted = true;
             console.log('✅ Muted autoplay successful');
-            showUnmuteButton();
         } catch (error) {
             console.log('❌ Muted autoplay failed:', error);
-            showInteractivePlayButton();
         }
     }
-}
-
-function playVideoWithSound() {
-    if (app.youtubePlayer && typeof app.youtubePlayer.playVideo === 'function') {
-        try {
-            if (app.isVideoMuted) {
-                app.youtubePlayer.unMute();
-                app.isVideoMuted = false;
-                console.log('🔊 Video unmuted');
-            }
-            
-            if (app.youtubePlayer.getPlayerState() !== YT.PlayerState.PLAYING) {
-                app.youtubePlayer.playVideo();
-                console.log('▶️ Video playing with sound');
-            }
-            
-            // Hide interactive buttons
-            hideInteractiveButtons();
-            
-        } catch (error) {
-            console.error('❌ Failed to play video with sound:', error);
-        }
-    }
-}
-
-function showUnmuteButton() {
-    const videoWrapper = document.querySelector('.video-player-wrapper');
-    if (!videoWrapper) return;
-    
-    const existingBtn = videoWrapper.querySelector('.unmute-btn');
-    if (existingBtn) existingBtn.remove();
-    
-    const unmuteBtn = document.createElement('button');
-    unmuteBtn.className = 'unmute-btn';
-    unmuteBtn.innerHTML = `
-        <i class="fas fa-volume-mute"></i>
-        Klik untuk Menyalakan Suara
-    `;
-    unmuteBtn.style.cssText = `
-        position: absolute;
-        bottom: 20px;
-        right: 20px;
-        background: rgba(0, 0, 0, 0.7);
-        color: white;
-        border: none;
-        padding: 10px 15px;
-        border-radius: 6px;
-        cursor: pointer;
-        z-index: 90;
-        font-family: 'Poppins', sans-serif;
-        font-size: 14px;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        backdrop-filter: blur(4px);
-    `;
-    
-    unmuteBtn.onclick = function() {
-        app.setUserInteracted();
-        playVideoWithSound();
-    };
-    
-    videoWrapper.appendChild(unmuteBtn);
-}
-
-function showInteractivePlayButton() {
-    const videoWrapper = document.querySelector('.video-player-wrapper');
-    if (!videoWrapper) return;
-    
-    const existingBtn = videoWrapper.querySelector('.interactive-play-btn');
-    if (existingBtn) existingBtn.remove();
-    
-    const playBtn = document.createElement('button');
-    playBtn.className = 'interactive-play-btn';
-    playBtn.innerHTML = `
-        <i class="fas fa-play-circle"></i>
-        Klik untuk Memutar Video
-    `;
-    playBtn.style.cssText = `
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: linear-gradient(135deg, var(--primary-gold), var(--gold-dark));
-        color: white;
-        border: none;
-        padding: 15px 30px;
-        border-radius: 12px;
-        font-family: 'Poppins', sans-serif;
-        font-size: 16px;
-        font-weight: 700;
-        cursor: pointer;
-        z-index: 100;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        box-shadow: 0 8px 32px rgba(212, 175, 55, 0.4);
-        transition: all 0.3s ease;
-        min-width: 250px;
-        text-align: center;
-        backdrop-filter: blur(4px);
-        border: 2px solid rgba(255, 255, 255, 0.2);
-    `;
-    
-    playBtn.onclick = function() {
-        app.setUserInteracted();
-        playVideoWithSound();
-    };
-    
-    // Add instructions
-    const instruction = document.createElement('div');
-    instruction.className = 'video-instruction';
-    instruction.textContent = 'Browser memerlukan interaksi untuk memutar video';
-    instruction.style.cssText = `
-        position: absolute;
-        top: calc(50% + 60px);
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 8px 16px;
-        border-radius: 8px;
-        font-size: 12px;
-        text-align: center;
-        z-index: 100;
-        backdrop-filter: blur(4px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        max-width: 280px;
-        width: 90%;
-    `;
-    
-    videoWrapper.appendChild(playBtn);
-    videoWrapper.appendChild(instruction);
-}
-
-function hideInteractiveButtons() {
-    const videoWrapper = document.querySelector('.video-player-wrapper');
-    if (!videoWrapper) return;
-    
-    ['unmute-btn', 'interactive-play-btn', 'video-instruction'].forEach(className => {
-        const element = videoWrapper.querySelector(`.${className}`);
-        if (element) element.remove();
-    });
 }
 
 function showVideoError() {
@@ -1072,51 +953,14 @@ function showVideoError() {
 
 function handleResponsiveLayout() {
     const width = window.innerWidth;
-    const height = window.innerHeight;
     
-    // Device type detection
-    const isMobile = width <= 768;
-    const isTablet = width > 768 && width <= 1024;
-    const isDesktop = width > 1024 && width <= 1440;
-    const isLargeScreen = width > 1440 && width <= 1920;
-    const isTV = width > 1920;
+    console.log(`📱 Responsive: ${width}x${window.innerHeight}`);
     
-    console.log(`📱 Responsive: ${width}x${height} | ${isMobile ? 'Mobile' : isTablet ? 'Tablet' : isDesktop ? 'Desktop' : isLargeScreen ? 'Large' : 'TV'}`);
-    
-    // Adjust table heights
-    const tables = document.querySelectorAll('.price-table-card');
-    const availableHeight = height - 200; // Account for header and footer
-    
-    tables.forEach(table => {
-        if (isMobile) {
-            table.style.minHeight = '350px';
-        } else if (isTablet) {
-            table.style.minHeight = '400px';
-        } else if (isDesktop) {
-            table.style.minHeight = '450px';
-        } else if (isLargeScreen) {
-            table.style.minHeight = '500px';
-        } else {
-            table.style.minHeight = '550px';
-        }
-        
-        // Ensure doesn't exceed viewport
-        if (table.offsetHeight > availableHeight) {
-            table.style.minHeight = availableHeight + 'px';
-        }
-    });
-    
-    // Adjust table layout for mobile
-    if (isMobile) {
-        document.querySelector('.tables-responsive-wrapper').style.gridTemplateColumns = '1fr';
-    } else if (isTablet) {
-        document.querySelector('.tables-responsive-wrapper').style.gridTemplateColumns = 'repeat(auto-fit, minmax(350px, 1fr))';
-    } else {
-        document.querySelector('.tables-responsive-wrapper').style.gridTemplateColumns = 'repeat(auto-fit, minmax(400px, 1fr))';
-    }
+    // Adjust table responsive
+    adjustTableResponsive();
     
     // Handle mobile menu
-    if (isMobile) {
+    if (width <= 768) {
         const hamburgerBtn = document.querySelector('.hamburger-btn');
         if (hamburgerBtn) {
             hamburgerBtn.style.display = 'flex';
@@ -1130,56 +974,16 @@ function handleResponsiveLayout() {
 }
 
 // ============================================
-// NAVIGATION & ROTATION
-// ============================================
-
-function navigateTables(direction) {
-    const types = APP_CONFIG.rotation.types;
-    const currentIndex = types.indexOf(app.currentTableType);
-    let nextIndex;
-    
-    if (direction === 'right') {
-        nextIndex = (currentIndex + 1) % types.length;
-    } else {
-        nextIndex = (currentIndex - 1 + types.length) % types.length;
-    }
-    
-    app.currentTableType = types[nextIndex];
-    displayTables(app.currentTableType);
-    
-    // Check if should show video for "archi" type
-    if (app.currentTableType === 'archi' && app.hasActiveAds() && !app.videoPlayed) {
-        setTimeout(() => {
-            showVideo();
-        }, APP_CONFIG.video.delayBeforeShow);
-    }
-}
-
-function startTableRotation() {
-    if (app.rotationInterval) {
-        clearInterval(app.rotationInterval);
-    }
-    
-    app.rotationInterval = setInterval(() => {
-        navigateTables('right');
-    }, APP_CONFIG.rotation.interval);
-}
-
-// ============================================
 // ERROR HANDLING & UI STATES
 // ============================================
 
 function showNoDataState() {
-    const html = `
-        <div class="no-data-message">
-            <i class="fas fa-database" style="font-size: 48px; margin-bottom: 20px; color: var(--dark-gray);"></i>
-            <h3 style="margin-bottom: 10px; color: var(--text-dark);">Data Tidak Tersedia</h3>
-            <p style="color: var(--text-light);">Tidak ada data harga emas untuk ditampilkan</p>
-        </div>
-    `;
+    const html = createNoDataHTML();
     
-    document.getElementById('priceTableLeft').innerHTML = html;
-    document.getElementById('priceTableRight').innerHTML = html;
+    document.getElementById('priceTableEmasMuda').innerHTML = html;
+    document.getElementById('priceTableEmasTua').innerHTML = html;
+    document.getElementById('priceTableAntam').innerHTML = html;
+    document.getElementById('priceTableArchie').innerHTML = html;
 }
 
 function showErrorState(elementId, message) {
@@ -1208,50 +1012,36 @@ function showErrorMessage(message) {
         right: 20px;
         background: var(--error);
         color: white;
-        padding: 15px 20px;
-        border-radius: 8px;
+        padding: 12px 16px;
+        border-radius: 6px;
         box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
         z-index: 9999;
         font-family: 'Poppins', sans-serif;
-        max-width: 300px;
-        animation: slideInRight 0.3s ease;
+        max-width: 250px;
+        font-size: 14px;
     `;
     
     toast.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <i class="fas fa-exclamation-circle" style="font-size: 20px;"></i>
-            <div>
-                <strong style="display: block; margin-bottom: 5px;">Error</strong>
-                <span>${escapeHTML(message)}</span>
-            </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-exclamation-circle"></i>
+            <span>${escapeHTML(message)}</span>
         </div>
     `;
     
     document.body.appendChild(toast);
     
-    // Auto remove after 5 seconds
+    // Auto remove after 3 seconds
     setTimeout(() => {
-        toast.style.animation = 'slideOutRight 0.3s ease';
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.parentNode.removeChild(toast);
-            }
-        }, 300);
-    }, 5000);
+        toast.remove();
+    }, 3000);
 }
 
 // ============================================
-// USER INTERACTION & AUTOPLAY
+// USER INTERACTION
 // ============================================
 
 function handleUserInteraction() {
     app.setUserInteracted();
-    
-    // Try to play video with sound if video is active
-    if (app.youtubePlayer && 
-        document.getElementById('videoContainer').classList.contains('active')) {
-        setTimeout(playVideoWithSound, 500);
-    }
 }
 
 function loadYouTubeAPI() {
@@ -1290,43 +1080,16 @@ function startPeriodicRefresh() {
 function toggleMobileMenu() {
     const header = document.querySelector('.main-header');
     header.classList.toggle('menu-open');
-    
-    // Add mobile menu styles if needed
-    if (!document.getElementById('mobileMenuStyles')) {
-        const style = document.createElement('style');
-        style.id = 'mobileMenuStyles';
-        style.textContent = `
-            @media (max-width: 768px) {
-                .main-header.menu-open .header-container {
-                    flex-direction: column;
-                    height: auto;
-                    padding: 15px;
-                }
-                
-                .main-header.menu-open .brand-logo {
-                    width: 100%;
-                    justify-content: space-between;
-                }
-                
-                .main-header.menu-open .ticker-container {
-                    margin-top: 10px;
-                    order: 3;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
 }
 
 // ============================================
 // GLOBAL EXPORTS
 // ============================================
 
-// Make some functions globally available for HTML onclick handlers
+// Make functions globally available
 window.playNextVideo = playNextVideo;
 window.hideVideo = hideVideo;
 window.toggleVideoMute = toggleVideoMute;
-window.handleUserInteraction = handleUserInteraction;
 window.loadPriceData = loadPriceData;
 
 // Initialize on load
