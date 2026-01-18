@@ -16,8 +16,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
   </head>
   <body>
+    <!-- Header dengan posisi fixed -->
     <header class="header">
-      <div class="container">
+      <div class="header-content">
         <div class="logo">
           <span class="logo-icon">
             <img
@@ -43,39 +44,48 @@
       </div>
     </header>
 
-    <main class="container">
-      <section class="price-section">
-        <div class="tables-container">
-          <button class="nav-btn left-nav">
-            <i class="fas fa-chevron-left"></i>
-          </button>
+    <!-- Main Content dengan tinggi yang menyesuaikan -->
+    <main class="main-content">
+      <div class="container">
+        <section class="price-section">
+          <!-- Container untuk card tabel -->
+          <div class="cards-container" id="cardsContainer">
+            <button class="nav-btn left-nav">
+              <i class="fas fa-chevron-left"></i>
+            </button>
 
-          <div class="table-wrapper" id="tableEmas">
-            <h2 class="table-title">Harga Emas</h2>
-            <div class="table-responsive" id="priceTableLeft"></div>
+            <div class="card-wrapper">
+              <div class="card-table" id="tableEmas">
+                <h2 class="card-title">Harga Emas</h2>
+                <div class="table-responsive" id="priceTableLeft"></div>
+              </div>
+            </div>
+
+            <div class="card-wrapper">
+              <div class="card-table" id="tableAntam">
+                <h2 class="card-title">Harga Antam</h2>
+                <div class="table-responsive" id="priceTableRight"></div>
+              </div>
+            </div>
+
+            <button class="nav-btn right-nav">
+              <i class="fas fa-chevron-right"></i>
+            </button>
           </div>
 
-          <div class="table-wrapper" id="tableAntam">
-            <h2 class="table-title">Harga Antam</h2>
-            <div class="table-responsive" id="priceTableRight"></div>
+          <!-- Video Container -->
+          <div class="video-container" id="videoContainer">
+            <div class="video-wrapper">
+              <!-- Video akan dimasukkan secara dinamis -->
+            </div>
           </div>
-
-          <button class="nav-btn right-nav">
-            <i class="fas fa-chevron-right"></i>
-          </button>
-        </div>
-
-        <!-- Video Container -->
-        <div class="video-container" id="videoContainer">
-          <div class="video-wrapper">
-            <!-- Video akan dimasukkan secara dinamis -->
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </main>
 
+    <!-- Footer dengan posisi fixed di bawah -->
     <footer class="footer">
-      <div class="container">
+      <div class="footer-content">
         <div class="footer-section">
           <h4>Kontak Kami</h4>
           <ul>
@@ -85,10 +95,10 @@
         <div class="footer-section">
           <h4>Sosial Media</h4>
           <div class="social-links">
-            <a href="https://www.instagram.com/kevinchandramw_"
+            <a href="https://www.instagram.com/kevinchandramw_" target="_blank"
               ><i class="fab fa-instagram"></i
             ></a>
-            <a href="https://wa.me/+6289656737562"
+            <a href="https://wa.me/+6289656737562" target="_blank"
               ><i class="fab fa-whatsapp"></i
             ></a>
           </div>
