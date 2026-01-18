@@ -21,6 +21,7 @@ const appState = {
   userInteracted: false,
   autoplayAttempted: false,
   isVideoMuted: true,
+  isMobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent),
 
   cache: {
     harga: { data: null, lastFetch: 0, expiration: 5 * 60 * 1000 },
@@ -32,11 +33,17 @@ const appState = {
 // ===== HELPER FUNCTIONS =====
 function formatCurrency(amount) {
   if (!amount || amount === 0) return "-";
+
+  // Untuk mobile, gunakan format yang lebih ringkas
+  if (appState.isMobile && amount >= 1000000) {
+    const formatted = (amount / 1000000).toFixed(1);
+    return `Rp${formatted.replace(".", ",")}Jt`;
+  }
+
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
   }).format(amount);
 }
 
@@ -56,37 +63,121 @@ function updateCache(cacheType, data) {
 
 // ===== INITIALIZATION =====
 document.addEventListener("DOMContentLoaded", function () {
-  console.log("🎯 Memuat aplikasi harga emas...");
+  console.log("📱 Memuat aplikasi harga emas...");
+
+  // Deteksi device type
+  detectDeviceType();
 
   setupUserInteractionListeners();
 
-  document.querySelector(".left-nav").addEventListener("click", () => {
-    handleUserInteraction();
-    navigateTables("left");
-  });
+  // Setup navigation - tampilkan hanya jika bukan mobile
+  if (!appState.isMobile) {
+    document.querySelector(".left-nav").addEventListener("click", () => {
+      handleUserInteraction();
+      navigateTables("left");
+    });
 
-  document.querySelector(".right-nav").addEventListener("click", () => {
-    handleUserInteraction();
-    navigateTables("right");
-  });
+    document.querySelector(".right-nav").addEventListener("click", () => {
+      handleUserInteraction();
+      navigateTables("right");
+    });
+  }
 
   loadPriceData();
   loadRunningText();
   loadAdsData();
 
-  startRotationInterval();
+  // Sesuaikan interval untuk mobile
+  if (appState.isMobile) {
+    startRotationInterval(30000); // 30 detik untuk mobile
+  } else {
+    startRotationInterval(25000); // 25 detik untuk desktop
+  }
+
   loadYouTubeAPI();
 
-  window.addEventListener("resize", adjustCardHeights);
-  window.addEventListener("orientationchange", adjustCardHeights);
+  // Adjust layout untuk mobile
+  adjustMobileLayout();
+  window.addEventListener("resize", adjustMobileLayout);
+  window.addEventListener("orientationchange", adjustMobileLayout);
 });
+
+function detectDeviceType() {
+  const width = window.innerWidth;
+  if (width <= 480) {
+    appState.deviceType = "mobile";
+  } else if (width <= 768) {
+    appState.deviceType = "tablet";
+  } else {
+    appState.deviceType = "desktop";
+  }
+  console.log(`📱 Device type: ${appState.deviceType}`);
+}
+
+function adjustMobileLayout() {
+  detectDeviceType();
+
+  // Toggle navigation buttons berdasarkan device
+  const navButtons = document.querySelectorAll(".nav-btn");
+  if (appState.deviceType === "mobile" || appState.deviceType === "tablet") {
+    navButtons.forEach((btn) => {
+      btn.style.display = "flex";
+      btn.style.position = "fixed";
+      btn.style.bottom = appState.deviceType === "mobile" ? "70px" : "100px";
+      btn.style.top = "auto";
+      btn.style.transform = "none";
+    });
+
+    document.querySelector(".left-nav").style.left = "15px";
+    document.querySelector(".right-nav").style.right = "15px";
+  } else {
+    navButtons.forEach((btn) => {
+      btn.style.display = "flex";
+      btn.style.position = "absolute";
+      btn.style.top = "50%";
+      btn.style.bottom = "auto";
+      btn.style.transform = "translateY(-50%)";
+    });
+
+    document.querySelector(".left-nav").style.left = "-25px";
+    document.querySelector(".right-nav").style.right = "-25px";
+  }
+
+  // Adjust card heights
+  adjustCardHeights();
+
+  // Adjust table layout untuk mobile
+  adjustTableLayout();
+}
+
+function adjustTableLayout() {
+  const tables = document.querySelectorAll(".price-table");
+  const isMobile = appState.deviceType === "mobile";
+
+  tables.forEach((table) => {
+    if (isMobile) {
+      table.style.fontSize = "0.75rem";
+      const ths = table.querySelectorAll("th");
+      const tds = table.querySelectorAll("td");
+
+      ths.forEach((th) => (th.style.padding = "8px 4px"));
+      tds.forEach((td) => (td.style.padding = "6px 4px"));
+    } else {
+      table.style.fontSize = "0.85rem";
+      const ths = table.querySelectorAll("th");
+      const tds = table.querySelectorAll("td");
+
+      ths.forEach((th) => (th.style.padding = "12px 8px"));
+      tds.forEach((td) => (td.style.padding = "10px 8px"));
+    }
+  });
+}
 
 function setupUserInteractionListeners() {
   ["click", "touchstart", "keydown", "mousemove"].forEach((eventType) => {
     document.addEventListener(eventType, handleUserInteraction, {
       once: false,
       passive: true,
-      capture: true,
     });
   });
 }
@@ -130,18 +221,25 @@ function adjustCardHeights() {
     if (height > maxHeight) maxHeight = height;
   });
 
+  // Untuk mobile, batasi tinggi maksimum
+  const maxAllowedHeight = appState.deviceType === "mobile" ? 350 : 400;
+  maxHeight = Math.min(maxHeight, maxAllowedHeight);
+
   cards.forEach((card) => (card.style.height = maxHeight + "px"));
 
   const tables = document.querySelectorAll(".table-responsive");
   tables.forEach((table) => {
-    table.style.maxHeight = maxHeight - 80 + "px";
+    table.style.maxHeight = maxHeight - 70 + "px"; // Account for title and padding
   });
 }
 
 // ===== TABLE ROTATION =====
-function startRotationInterval() {
+function startRotationInterval(duration = 25000) {
   if (appState.rotationInterval) clearInterval(appState.rotationInterval);
-  appState.rotationInterval = setInterval(() => navigateTables("right"), 25000);
+  appState.rotationInterval = setInterval(
+    () => navigateTables("right"),
+    duration
+  );
 }
 
 function navigateTables(direction) {
@@ -188,7 +286,7 @@ function showVideoAfterDelay() {
   setTimeout(() => showVideo(), 3000);
 }
 
-// ===== VIDEO FUNCTIONS =====
+// ===== VIDEO FUNCTIONS (OPTIMIZED FOR MOBILE) =====
 function showVideo() {
   const activeAds = appState.adsData.filter(
     (ad) =>
@@ -217,9 +315,11 @@ function showVideo() {
     }`
   );
 
+  // Hide tables
   document.getElementById("tableEmas").style.display = "none";
   document.getElementById("tableAntam").style.display = "none";
 
+  // Clear and setup video container
   videoWrapper.innerHTML = "";
 
   const videoContainerDiv = document.createElement("div");
@@ -230,6 +330,7 @@ function showVideo() {
   videoContainer.classList.add("active");
   appState.videoPlayed = true;
 
+  // Setup YouTube player
   setTimeout(() => setupYouTubePlayer(selectedAd.video_url), 500);
 }
 
@@ -252,22 +353,30 @@ function setupYouTubePlayer(videoUrl) {
   appState.autoplayAttempted = false;
   appState.isVideoMuted = true;
 
+  // Player vars khusus untuk mobile
+  const playerVars = {
+    autoplay: 1,
+    mute: 1,
+    enablejsapi: 1,
+    rel: 0,
+    playsinline: 1,
+    controls: 1,
+    modestbranding: 1,
+    showinfo: 0,
+    iv_load_policy: 3,
+  };
+
+  // Tambahkan parameter khusus untuk iOS
+  if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+    playerVars.playsinline = 1;
+    playerVars.fs = 0; // Nonaktifkan fullscreen button
+  }
+
   appState.youtubePlayer = new YT.Player("player", {
     width: "100%",
     height: "100%",
     videoId: videoId,
-    playerVars: {
-      autoplay: 1,
-      mute: 1,
-      enablejsapi: 1,
-      rel: 0,
-      playsinline: 1,
-      controls: 1,
-      modestbranding: 1,
-      showinfo: 0,
-      iv_load_policy: 3,
-      fs: 1,
-    },
+    playerVars: playerVars,
     events: {
       onReady: onPlayerReady,
       onStateChange: onPlayerStateChange,
@@ -373,7 +482,7 @@ function showUnmuteButton(player) {
 
   const unmuteBtn = document.createElement("button");
   unmuteBtn.className = "unmute-btn";
-  unmuteBtn.innerHTML = `<i class="fas fa-volume-mute"></i><span>Klik untuk Menyalakan Suara</span>`;
+  unmuteBtn.innerHTML = `<i class="fas fa-volume-mute"></i><span>Nyalakan Suara</span>`;
   unmuteBtn.onclick = function () {
     handleUserInteraction();
     playVideoWithSound();
@@ -389,19 +498,13 @@ function showInteractivePlayButton(player) {
 
   const playBtn = document.createElement("button");
   playBtn.className = "play-btn";
-  playBtn.innerHTML = `<i class="fas fa-play"></i><span>Klik untuk Memutar Video</span>`;
+  playBtn.innerHTML = `<i class="fas fa-play"></i><span>Putar Video</span>`;
   playBtn.onclick = function () {
     handleUserInteraction();
     playVideoWithSound();
   };
 
-  const instruction = document.createElement("div");
-  instruction.className = "play-instruction";
-  instruction.textContent = "Browser memerlukan interaksi untuk memutar video";
-  instruction.style.cssText = `position: absolute; top: calc(50% + 70px); left: 50%; transform: translateX(-50%); color: white; background: rgba(0,0,0,0.7); padding: 8px 16px; border-radius: 6px; font-size: 14px; text-align: center; backdrop-filter: blur(5px);`;
-
   videoWrapper.appendChild(playBtn);
-  videoWrapper.appendChild(instruction);
 }
 
 function showVideoFallback() {
@@ -410,10 +513,10 @@ function showVideoFallback() {
 
   videoWrapper.innerHTML = `
         <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); color: white; padding: 20px; text-align: center; border-radius: 8px;">
-            <i class="fas fa-video-slash" style="font-size: 48px; margin-bottom: 20px; color: var(--primary);"></i>
-            <h3 style="margin-bottom: 10px; font-size: 1.3rem;">Video Tidak Dapat Diputar</h3>
-            <p style="margin-bottom: 20px; opacity: 0.8;">Video iklan sedang tidak tersedia</p>
-            <button onclick="hideVideo()" style="padding: 12px 24px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 1rem; transition: all 0.3s ease;">
+            <i class="fas fa-video-slash" style="font-size: 48px; margin-bottom: 15px; color: var(--primary);"></i>
+            <h3 style="margin-bottom: 10px; font-size: 1.2rem;">Video Tidak Dapat Diputar</h3>
+            <p style="margin-bottom: 20px; opacity: 0.8; font-size: 0.9rem;">Video iklan sedang tidak tersedia</p>
+            <button onclick="hideVideo()" style="padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease;">
                 Lanjutkan Ke Harga Emas
             </button>
         </div>
@@ -465,6 +568,9 @@ function hideVideo() {
 
   document.getElementById("tableEmas").style.display = "flex";
   document.getElementById("tableAntam").style.display = "flex";
+
+  // Re-adjust layout
+  setTimeout(adjustCardHeights, 100);
 }
 
 // ===== DATA LOADING FUNCTIONS =====
@@ -487,7 +593,10 @@ async function loadPriceData() {
       );
 
       displayTables("emas");
-      setTimeout(adjustCardHeights, 100);
+      setTimeout(() => {
+        adjustCardHeights();
+        adjustTableLayout();
+      }, 100);
       return;
     }
 
@@ -515,7 +624,10 @@ async function loadPriceData() {
       `✅ Data loaded: Emas(${appState.tableData.emas.length}), Antam(${appState.tableData.antam.length}), Archi(${appState.tableData.archi.length})`
     );
     displayTables("emas");
-    setTimeout(adjustCardHeights, 100);
+    setTimeout(() => {
+      adjustCardHeights();
+      adjustTableLayout();
+    }, 100);
   } catch (error) {
     console.error("❌ Error loading CSV data:", error);
 
@@ -534,7 +646,10 @@ async function loadPriceData() {
       );
 
       displayTables("emas");
-      setTimeout(adjustCardHeights, 100);
+      setTimeout(() => {
+        adjustCardHeights();
+        adjustTableLayout();
+      }, 100);
     } else {
       showError();
     }
@@ -704,17 +819,20 @@ function processRunningTextData(data) {
     return;
   }
 
-  const marqueeContent = runningTexts.join(" | ");
+  // Untuk mobile, batasi panjang text
+  const maxLength = appState.deviceType === "mobile" ? 100 : 200;
+  const truncatedTexts = runningTexts.map((text) => {
+    if (text.length > maxLength) return text.substring(0, maxLength) + "...";
+    return text;
+  });
+
+  const marqueeContent = truncatedTexts.join(" | ");
   const marqueeElement = document.getElementById("marqueeText");
   marqueeElement.textContent = marqueeContent;
 
-  adjustMarqueeSpeed(marqueeContent.length);
-}
-
-function adjustMarqueeSpeed(textLength) {
-  const marqueeElement = document.getElementById("marqueeText");
-  const baseDuration = 60;
-  const duration = Math.max(baseDuration, textLength / 8);
+  // Adjust speed berdasarkan device
+  const baseDuration = appState.deviceType === "mobile" ? 90 : 60;
+  const duration = Math.max(baseDuration, marqueeContent.length / 8);
 
   marqueeElement.style.animation = "none";
   setTimeout(
@@ -758,14 +876,24 @@ function displayTables(type) {
 
   updateTableTitles(type);
 
-  const half = Math.ceil(data.length / 2);
-  const leftData = data.slice(0, half);
-  const rightData = data.slice(half);
+  // Untuk mobile, tampilkan semua data dalam satu tabel
+  if (appState.deviceType === "mobile") {
+    updateTable("priceTableLeft", data, type);
+    document.getElementById("tableAntam").style.display = "none";
+  } else {
+    const half = Math.ceil(data.length / 2);
+    const leftData = data.slice(0, half);
+    const rightData = data.slice(half);
 
-  updateTable("priceTableLeft", leftData, type);
-  updateTable("priceTableRight", rightData, type);
+    updateTable("priceTableLeft", leftData, type);
+    updateTable("priceTableRight", rightData, type);
+    document.getElementById("tableAntam").style.display = "flex";
+  }
 
-  setTimeout(adjustCardHeights, 50);
+  setTimeout(() => {
+    adjustCardHeights();
+    adjustTableLayout();
+  }, 50);
 }
 
 function updateTableTitles(type) {
@@ -773,13 +901,13 @@ function updateTableTitles(type) {
 
   if (type === "emas") {
     tableTitles[0].textContent = "Harga Emas";
-    tableTitles[1].textContent = "Harga Emas";
+    if (tableTitles[1]) tableTitles[1].textContent = "Harga Emas";
   } else if (type === "antam") {
     tableTitles[0].textContent = "Harga Antam";
-    tableTitles[1].textContent = "Harga Antam";
+    if (tableTitles[1]) tableTitles[1].textContent = "Harga Antam";
   } else if (type === "archi") {
     tableTitles[0].textContent = "Harga Archi";
-    tableTitles[1].textContent = "Harga Archi";
+    if (tableTitles[1]) tableTitles[1].textContent = "Harga Archi";
   }
 }
 
@@ -830,7 +958,7 @@ function showError() {
         <div class="error-message">
             <i class="fas fa-exclamation-triangle"></i>
             <p>Gagal memuat data. Silakan coba lagi.</p>
-            <button onclick="loadPriceData()" style="margin-top: 15px; padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif;">
+            <button onclick="loadPriceData()" style="margin-top: 15px; padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif; font-size: 0.9rem;">
                 Muat Ulang Data
             </button>
         </div>
@@ -867,7 +995,11 @@ document.addEventListener("visibilitychange", function () {
     if (appState.rotationInterval) clearInterval(appState.rotationInterval);
   } else {
     console.log("▶️ Halaman aktif");
-    startRotationInterval();
+    if (appState.isMobile) {
+      startRotationInterval(30000);
+    } else {
+      startRotationInterval(25000);
+    }
   }
 });
 
@@ -886,5 +1018,20 @@ window.addEventListener("beforeunload", function () {
   }
 });
 
+// ===== TOUCH EVENT FOR MOBILE =====
+document.addEventListener(
+  "touchstart",
+  function () {
+    // Prevent zoom on double tap
+    if (appState.deviceType === "mobile") {
+      document.documentElement.style.touchAction = "pan-y";
+    }
+  },
+  { passive: true }
+);
+
 // ===== INITIAL ADJUSTMENT =====
-setTimeout(() => adjustCardHeights(), 1000);
+setTimeout(() => {
+  adjustCardHeights();
+  adjustTableLayout();
+}, 1000);
