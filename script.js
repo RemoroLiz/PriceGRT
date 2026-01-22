@@ -10,7 +10,11 @@ const SHEET_BASE_URL =
 
 // ===== STATE APLIKASI =====
 const appState = {
-  tableData: {},
+  tableData: {
+    emas: [],
+    antam: [],
+    archi: [],
+  },
   currentTableType: "emas",
   rotationInterval: null,
   adsData: [],
@@ -22,6 +26,10 @@ const appState = {
   autoplayAttempted: false,
   isVideoMuted: true,
   isMobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent),
+  runningTexts: [],
+  currentRunningTextIndex: 0,
+  runningTextInterval: null,
+  isLoading: true,
 
   cache: {
     harga: { data: null, lastFetch: 0, expiration: 5 * 60 * 1000 },
@@ -32,18 +40,14 @@ const appState = {
 
 // ===== HELPER FUNCTIONS =====
 function formatCurrency(amount) {
-  if (!amount || amount === 0) return "-";
+  if (!amount || isNaN(amount) || amount === 0) return "-";
 
-  // Untuk mobile, gunakan format yang lebih ringkas
-  if (appState.isMobile && amount >= 1000000) {
-    const formatted = (amount / 1000000).toFixed(1);
-    return `Rp${formatted.replace(".", ",")}Jt`;
-  }
-
+  // SELALU tampilkan angka penuh tanpa singkatan "Jt"
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
     minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(amount);
 }
 
@@ -61,116 +65,77 @@ function updateCache(cacheType, data) {
   };
 }
 
+function showLoading() {
+  document.getElementById("loadingState").style.display = "flex";
+  document.getElementById("cardsContainer").style.display = "none";
+  appState.isLoading = true;
+}
+
+function hideLoading() {
+  document.getElementById("loadingState").style.display = "none";
+  document.getElementById("cardsContainer").style.display = "grid";
+  appState.isLoading = false;
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === "," && !inQuotes) {
+      result.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  result.push(current);
+
+  return result.map((field) => {
+    let trimmed = field.trim();
+    if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+      trimmed = trimmed.substring(1, trimmed.length - 1);
+    }
+    return trimmed;
+  });
+}
+
 // ===== INITIALIZATION =====
 document.addEventListener("DOMContentLoaded", function () {
   console.log("📱 Memuat aplikasi harga emas...");
 
-  // Deteksi device type
-  detectDeviceType();
-
   setupUserInteractionListeners();
+  setupNavigation();
 
-  // Setup navigation - tampilkan hanya jika bukan mobile
-  if (!appState.isMobile) {
-    document.querySelector(".left-nav").addEventListener("click", () => {
+  // Load semua data
+  loadAllData();
+
+  // Event listeners untuk responsive design
+  window.addEventListener("resize", adjustLayout);
+  window.addEventListener("orientationchange", adjustLayout);
+});
+
+function setupNavigation() {
+  const leftBtn = document.querySelector(".left-nav");
+  const rightBtn = document.querySelector(".right-nav");
+
+  if (leftBtn && rightBtn) {
+    leftBtn.addEventListener("click", () => {
       handleUserInteraction();
       navigateTables("left");
     });
 
-    document.querySelector(".right-nav").addEventListener("click", () => {
+    rightBtn.addEventListener("click", () => {
       handleUserInteraction();
       navigateTables("right");
     });
   }
-
-  loadPriceData();
-  loadRunningText();
-  loadAdsData();
-
-  // Sesuaikan interval untuk mobile
-  if (appState.isMobile) {
-    startRotationInterval(30000); // 30 detik untuk mobile
-  } else {
-    startRotationInterval(25000); // 25 detik untuk desktop
-  }
-
-  loadYouTubeAPI();
-
-  // Adjust layout untuk mobile
-  adjustMobileLayout();
-  window.addEventListener("resize", adjustMobileLayout);
-  window.addEventListener("orientationchange", adjustMobileLayout);
-});
-
-function detectDeviceType() {
-  const width = window.innerWidth;
-  if (width <= 480) {
-    appState.deviceType = "mobile";
-  } else if (width <= 768) {
-    appState.deviceType = "tablet";
-  } else {
-    appState.deviceType = "desktop";
-  }
-  console.log(`📱 Device type: ${appState.deviceType}`);
-}
-
-function adjustMobileLayout() {
-  detectDeviceType();
-
-  // Toggle navigation buttons berdasarkan device
-  const navButtons = document.querySelectorAll(".nav-btn");
-  if (appState.deviceType === "mobile" || appState.deviceType === "tablet") {
-    navButtons.forEach((btn) => {
-      btn.style.display = "flex";
-      btn.style.position = "fixed";
-      btn.style.bottom = appState.deviceType === "mobile" ? "70px" : "100px";
-      btn.style.top = "auto";
-      btn.style.transform = "none";
-    });
-
-    document.querySelector(".left-nav").style.left = "15px";
-    document.querySelector(".right-nav").style.right = "15px";
-  } else {
-    navButtons.forEach((btn) => {
-      btn.style.display = "flex";
-      btn.style.position = "absolute";
-      btn.style.top = "50%";
-      btn.style.bottom = "auto";
-      btn.style.transform = "translateY(-50%)";
-    });
-
-    document.querySelector(".left-nav").style.left = "-25px";
-    document.querySelector(".right-nav").style.right = "-25px";
-  }
-
-  // Adjust card heights
-  adjustCardHeights();
-
-  // Adjust table layout untuk mobile
-  adjustTableLayout();
-}
-
-function adjustTableLayout() {
-  const tables = document.querySelectorAll(".price-table");
-  const isMobile = appState.deviceType === "mobile";
-
-  tables.forEach((table) => {
-    if (isMobile) {
-      table.style.fontSize = "0.75rem";
-      const ths = table.querySelectorAll("th");
-      const tds = table.querySelectorAll("td");
-
-      ths.forEach((th) => (th.style.padding = "8px 4px"));
-      tds.forEach((td) => (td.style.padding = "6px 4px"));
-    } else {
-      table.style.fontSize = "0.85rem";
-      const ths = table.querySelectorAll("th");
-      const tds = table.querySelectorAll("td");
-
-      ths.forEach((th) => (th.style.padding = "12px 8px"));
-      tds.forEach((td) => (td.style.padding = "10px 8px"));
-    }
-  });
 }
 
 function setupUserInteractionListeners() {
@@ -197,40 +162,460 @@ function handleUserInteraction() {
   }
 }
 
-function loadYouTubeAPI() {
-  if (!appState.isYouTubeAPILoaded) {
-    const tag = document.createElement("script");
-    tag.src = "https://www.youtube.com/iframe_api";
-    tag.async = true;
-    const firstScriptTag = document.getElementsByTagName("script")[0];
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-    appState.isYouTubeAPILoaded = true;
+async function loadAllData() {
+  showLoading();
+
+  try {
+    await Promise.all([loadPriceData(), loadRunningText(), loadAdsData()]);
+
+    console.log("✅ Semua data berhasil dimuat");
+    hideLoading();
+
+    // Setup rotasi tabel
+    if (!appState.isMobile) {
+      startRotationInterval(25000);
+    } else {
+      startRotationInterval(30000);
+    }
+
+    // Setup YouTube API
+    loadYouTubeAPI();
+
+    // Adjust layout
+    adjustLayout();
+  } catch (error) {
+    console.error("❌ Gagal memuat data:", error);
+    hideLoading();
+    showError("Gagal memuat data. Silakan refresh halaman.");
   }
 }
 
-// ===== LAYOUT FUNCTIONS =====
-function adjustCardHeights() {
-  const cards = document.querySelectorAll(".card-table");
-  if (cards.length < 2) return;
+function adjustLayout() {
+  const width = window.innerWidth;
 
-  cards.forEach((card) => (card.style.height = "auto"));
+  // Adjust card layout berdasarkan lebar layar
+  if (width <= 768) {
+    // Mode mobile/tablet - satu kolom
+    const container = document.getElementById("cardsContainer");
+    if (container) {
+      container.style.gridTemplateColumns = "1fr";
+    }
 
-  let maxHeight = 0;
-  cards.forEach((card) => {
-    const height = card.offsetHeight;
-    if (height > maxHeight) maxHeight = height;
-  });
+    // Sembunyikan tabel kedua jika tidak ada data
+    const tableAntam = document.getElementById("tableAntam");
+    if (tableAntam && appState.tableData.antam.length === 0) {
+      tableAntam.style.display = "none";
+    }
+  } else {
+    // Mode desktop - dua kolom
+    const container = document.getElementById("cardsContainer");
+    if (container) {
+      container.style.gridTemplateColumns = "1fr 1fr";
+    }
 
-  // Untuk mobile, batasi tinggi maksimum
-  const maxAllowedHeight = appState.deviceType === "mobile" ? 350 : 400;
-  maxHeight = Math.min(maxHeight, maxAllowedHeight);
+    // Tampilkan kembali tabel kedua
+    const tableAntam = document.getElementById("tableAntam");
+    if (tableAntam) {
+      tableAntam.style.display = "flex";
+    }
+  }
 
-  cards.forEach((card) => (card.style.height = maxHeight + "px"));
+  // Adjust table sizes
+  adjustTableSizes();
+}
 
-  const tables = document.querySelectorAll(".table-responsive");
+function adjustTableSizes() {
+  const tables = document.querySelectorAll(".price-table");
+  const isMobile = window.innerWidth <= 480;
+
   tables.forEach((table) => {
-    table.style.maxHeight = maxHeight - 70 + "px"; // Account for title and padding
+    if (isMobile) {
+      table.style.fontSize = "0.75rem";
+      const ths = table.querySelectorAll("th");
+      const tds = table.querySelectorAll("td");
+
+      ths.forEach((th) => (th.style.padding = "8px 4px"));
+      tds.forEach((td) => (td.style.padding = "6px 4px"));
+    } else {
+      table.style.fontSize = "0.85rem";
+      const ths = table.querySelectorAll("th");
+      const tds = table.querySelectorAll("td");
+
+      ths.forEach((th) => (th.style.padding = "12px 8px"));
+      tds.forEach((td) => (td.style.padding = "10px 8px"));
+    }
   });
+}
+
+// ===== RUNNING TEXT FUNCTIONS =====
+async function loadRunningText() {
+  try {
+    console.log("📜 Memuat running text...");
+
+    if (isCacheValid("runningText")) {
+      const cachedData = appState.cache.runningText.data;
+      processRunningTextData(cachedData);
+      return;
+    }
+
+    const url = `${SHEET_BASE_URL}?gid=${SHEET_CONFIG.runningText.gid}&single=false&output=csv`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const csvText = await response.text();
+    const data = parseRunningTextCSV(csvText);
+
+    updateCache("runningText", data);
+    processRunningTextData(data);
+  } catch (error) {
+    console.error("❌ Error loading running text:", error);
+    setDefaultRunningText();
+  }
+}
+
+function parseRunningTextCSV(csvText) {
+  try {
+    const lines = csvText.trim().split("\n");
+    if (lines.length < 2) return [];
+
+    const result = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line) {
+        const values = parseCSVLine(line);
+        if (values[0] && values[0].trim()) {
+          result.push({ teks: values[0].trim() });
+        }
+      }
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Error parsing running text CSV:", error);
+    return [];
+  }
+}
+
+function processRunningTextData(data) {
+  if (!data || data.length === 0) {
+    console.log("⚠️ Tidak ada data running text");
+    setDefaultRunningText();
+    return;
+  }
+
+  const allTexts = data
+    .map((item) => item.teks)
+    .filter((text) => text && text.trim().length > 0)
+    .filter((text) => !text.toLowerCase().includes("teks"))
+    .filter((value, index, self) => self.indexOf(value) === index);
+
+  if (allTexts.length === 0) {
+    setDefaultRunningText();
+    return;
+  }
+
+  appState.runningTexts = allTexts;
+  appState.currentRunningTextIndex = 0;
+
+  displayCurrentRunningText();
+  startRunningTextRotation();
+}
+
+function setDefaultRunningText() {
+  const defaultTexts = [
+    "Harga emas terkini - Informasi terupdate setiap hari",
+    "Pantes CitiMall Garut - Terpercaya sejak 2010",
+    "Jual beli emas, logam mulia, dan perhiasan",
+    "Harga kompetitif dan transaksi aman",
+  ];
+
+  appState.runningTexts = defaultTexts;
+  appState.currentRunningTextIndex = 0;
+  displayCurrentRunningText();
+  startRunningTextRotation();
+}
+
+function displayCurrentRunningText() {
+  const marqueeElement = document.getElementById("marqueeText");
+
+  if (!marqueeElement || appState.runningTexts.length === 0) return;
+
+  const currentText = appState.runningTexts[appState.currentRunningTextIndex];
+  marqueeElement.textContent = currentText;
+
+  // Calculate animation duration based on text length
+  const textLength = currentText.length;
+  const duration = Math.max(20, textLength / 5);
+
+  // Reset and start new animation
+  marqueeElement.style.animation = "none";
+  void marqueeElement.offsetWidth;
+  marqueeElement.style.animation = `marquee ${duration}s linear infinite`;
+}
+
+function startRunningTextRotation() {
+  if (appState.runningTextInterval) {
+    clearInterval(appState.runningTextInterval);
+  }
+
+  appState.runningTextInterval = setInterval(() => {
+    appState.currentRunningTextIndex =
+      (appState.currentRunningTextIndex + 1) % appState.runningTexts.length;
+    displayCurrentRunningText();
+  }, 15000);
+}
+
+// ===== PRICE DATA FUNCTIONS =====
+async function loadPriceData() {
+  try {
+    console.log("📊 Memuat data harga...");
+
+    if (isCacheValid("harga")) {
+      console.log("💾 Menggunakan data harga dari cache");
+      const cachedData = appState.cache.harga.data;
+      processPriceData(cachedData);
+      return;
+    }
+
+    const url = `${SHEET_BASE_URL}?gid=${SHEET_CONFIG.harga.gid}&single=false&output=csv`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const csvText = await response.text();
+    const data = parsePriceCSV(csvText);
+
+    updateCache("harga", data);
+    processPriceData(data);
+  } catch (error) {
+    console.error("❌ Error loading price data:", error);
+
+    if (appState.cache.harga.data) {
+      console.log("🔄 Menggunakan data cache sebagai fallback");
+      processPriceData(appState.cache.harga.data);
+    } else {
+      showNoData();
+    }
+  }
+}
+
+function parsePriceCSV(csvText) {
+  try {
+    const lines = csvText.trim().split("\n");
+    if (lines.length < 2) return [];
+
+    const headers = lines[0].split(",").map((h) => h.toLowerCase().trim());
+    const result = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      const values = parseCSVLine(line);
+      const row = {};
+
+      headers.forEach((header, index) => {
+        if (index < values.length) {
+          let value = values[index];
+
+          // Clean numeric values
+          if (
+            header.includes("harga") ||
+            header.includes("buyback") ||
+            header.includes("harga_jual")
+          ) {
+            // Hapus semua karakter non-angka
+            const cleaned = value.replace(/[^0-9]/g, "");
+            value = cleaned ? parseInt(cleaned) : 0;
+          }
+
+          row[header] = value;
+        }
+      });
+
+      // Only add if it has required data
+      if (row.kode && (row.harga_jual || row.buyback)) {
+        result.push(row);
+      }
+    }
+
+    console.log("📈 Data harga yang di-parse:", result);
+    return result;
+  } catch (error) {
+    console.error("Error parsing price CSV:", error);
+    return [];
+  }
+}
+
+function processPriceData(data) {
+  if (!data || data.length === 0) {
+    console.log("⚠️ Tidak ada data harga");
+    showNoData();
+    return;
+  }
+
+  // Reset data
+  appState.tableData = {
+    emas: [],
+    antam: [],
+    archi: [],
+  };
+
+  // Group data by type
+  data.forEach((item) => {
+    const type = item.tipe ? item.tipe.toLowerCase().trim() : "emas";
+
+    if (type === "emas") {
+      appState.tableData.emas.push(item);
+    } else if (type === "antam") {
+      appState.tableData.antam.push(item);
+    } else if (type === "archi") {
+      appState.tableData.archi.push(item);
+    }
+  });
+
+  console.log(
+    `✅ Data processed: Emas(${appState.tableData.emas.length}), Antam(${appState.tableData.antam.length}), Archi(${appState.tableData.archi.length})`,
+  );
+
+  // Display initial table
+  displayTables(appState.currentTableType);
+  adjustLayout();
+}
+
+function displayTables(type) {
+  const data = appState.tableData[type];
+
+  if (!data || data.length === 0) {
+    showNoDataForTable(type);
+    return;
+  }
+
+  updateTableTitles(type);
+
+  if (window.innerWidth <= 768) {
+    // Mobile - show all data in one table
+    updateTable("priceTableLeft", data, type);
+    // Hide second table
+    document.getElementById("tableAntam").style.display = "none";
+  } else {
+    // Desktop - split data between two tables
+    const half = Math.ceil(data.length / 2);
+    const leftData = data.slice(0, half);
+    const rightData = data.slice(half);
+
+    updateTable("priceTableLeft", leftData, type);
+    updateTable("priceTableRight", rightData, type);
+    document.getElementById("tableAntam").style.display = "flex";
+  }
+}
+
+function updateTableTitles(type) {
+  const titles = {
+    emas: "Harga Emas",
+    antam: "Harga Antam",
+    archi: "Harga Archi",
+  };
+
+  const tableTitles = document.querySelectorAll(".card-title");
+  const title = titles[type] || "Harga Emas";
+
+  tableTitles[0].textContent = title;
+  if (tableTitles[1]) {
+    tableTitles[1].textContent = title;
+  }
+}
+
+function updateTable(elementId, data, type) {
+  const tableElement = document.getElementById(elementId);
+
+  if (!data || data.length === 0) {
+    tableElement.innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-database"></i>
+                <p>Data ${type} tidak tersedia</p>
+            </div>
+        `;
+    return;
+  }
+
+  let tableHTML = `
+        <table class="price-table">
+            <thead>
+                <tr>
+                    <th>Kode</th>
+                    <th>Harga Jual</th>
+                    <th>Harga Beli</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+  data.forEach((item) => {
+    const hargaJual = item.harga_jual || 0;
+    const buyback = item.buyback || 0;
+
+    tableHTML += `
+            <tr>
+                <td>${item.kode || "-"}</td>
+                <td class="highlight">${formatCurrency(hargaJual)}</td>
+                <td class="highlight">${formatCurrency(buyback)}</td>
+            </tr>
+        `;
+  });
+
+  tableHTML += `
+            </tbody>
+        </table>
+    `;
+
+  tableElement.innerHTML = tableHTML;
+}
+
+function showNoData() {
+  const errorHTML = `
+        <div class="error-message">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>Data harga tidak tersedia saat ini.</p>
+            <button onclick="location.reload()">Muat Ulang</button>
+        </div>
+    `;
+
+  document.getElementById("priceTableLeft").innerHTML = errorHTML;
+  document.getElementById("priceTableRight").innerHTML = errorHTML;
+}
+
+function showNoDataForTable(type) {
+  const tableName =
+    type === "emas" ? "Emas" : type === "antam" ? "Antam" : "Archi";
+
+  const noDataHTML = `
+        <div class="no-data">
+            <i class="fas fa-database"></i>
+            <p>Data ${tableName} tidak tersedia</p>
+        </div>
+    `;
+
+  document.getElementById("priceTableLeft").innerHTML = noDataHTML;
+  document.getElementById("priceTableRight").innerHTML = noDataHTML;
+}
+
+function showError(message) {
+  const errorHTML = `
+        <div class="error-message">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>${message || "Terjadi kesalahan"}</p>
+            <button onclick="location.reload()">Muat Ulang</button>
+        </div>
+    `;
+
+  document.getElementById("priceTableLeft").innerHTML = errorHTML;
+  document.getElementById("priceTableRight").innerHTML = errorHTML;
 }
 
 // ===== TABLE ROTATION =====
@@ -238,7 +623,7 @@ function startRotationInterval(duration = 25000) {
   if (appState.rotationInterval) clearInterval(appState.rotationInterval);
   appState.rotationInterval = setInterval(
     () => navigateTables("right"),
-    duration
+    duration,
   );
 }
 
@@ -247,18 +632,98 @@ function navigateTables(direction) {
   const currentIndex = types.indexOf(appState.currentTableType);
   let nextIndex;
 
-  if (direction === "right") nextIndex = (currentIndex + 1) % types.length;
-  else nextIndex = (currentIndex - 1 + types.length) % types.length;
+  if (direction === "right") {
+    nextIndex = (currentIndex + 1) % types.length;
+  } else {
+    nextIndex = (currentIndex - 1 + types.length) % types.length;
+  }
+
+  // Skip jika tidak ada data untuk tipe tersebut
+  if (appState.tableData[types[nextIndex]].length === 0) {
+    // Cari tipe berikutnya yang memiliki data
+    for (let i = 1; i < types.length; i++) {
+      const checkIndex = (nextIndex + i) % types.length;
+      if (appState.tableData[types[checkIndex]].length > 0) {
+        nextIndex = checkIndex;
+        break;
+      }
+    }
+  }
 
   appState.currentTableType = types[nextIndex];
   displayTables(appState.currentTableType);
 
+  // Jika pindah ke archi dan ada video, tampilkan video
   if (
     appState.currentTableType === "archi" &&
     hasActiveAds() &&
     !appState.videoPlayed
   ) {
-    showVideoAfterDelay();
+    setTimeout(() => showVideo(), 3000);
+  }
+}
+
+// ===== ADS DATA FUNCTIONS =====
+async function loadAdsData() {
+  try {
+    console.log("🎬 Memuat data iklan...");
+
+    if (isCacheValid("iklan")) {
+      appState.adsData = appState.cache.iklan.data;
+      return;
+    }
+
+    const url = `${SHEET_BASE_URL}?gid=${SHEET_CONFIG.iklan.gid}&single=false&output=csv`;
+    const response = await fetch(url);
+
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+    const csvText = await response.text();
+    const data = parseAdsCSV(csvText);
+
+    updateCache("iklan", data);
+    appState.adsData = data;
+  } catch (error) {
+    console.error("❌ Error loading ads data:", error);
+    appState.adsData = [];
+  }
+}
+
+function parseAdsCSV(csvText) {
+  try {
+    const lines = csvText.trim().split("\n");
+    if (lines.length < 2) return [];
+
+    const headers = lines[0].split(",").map((h) => h.toLowerCase().trim());
+    const result = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      const values = parseCSVLine(line);
+      const obj = {};
+
+      headers.forEach((header, index) => {
+        if (index < values.length) {
+          obj[header] = values[index];
+        }
+      });
+
+      if (
+        obj.video_url &&
+        obj.video_url.trim() &&
+        obj.status &&
+        obj.status.toLowerCase() === "active"
+      ) {
+        result.push(obj);
+      }
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Error parsing ads CSV:", error);
+    return [];
   }
 }
 
@@ -269,7 +734,7 @@ function hasActiveAds() {
         ad.status &&
         ad.status.toLowerCase() === "active" &&
         ad.video_url &&
-        isValidYouTubeUrl(ad.video_url)
+        isValidYouTubeUrl(ad.video_url),
     ).length > 0
   );
 }
@@ -282,18 +747,24 @@ function isValidYouTubeUrl(url) {
   return youtubePattern.test(cleanUrl);
 }
 
-function showVideoAfterDelay() {
-  setTimeout(() => showVideo(), 3000);
+// ===== VIDEO FUNCTIONS =====
+function loadYouTubeAPI() {
+  if (!appState.isYouTubeAPILoaded) {
+    const tag = document.createElement("script");
+    tag.src = "https://www.youtube.com/iframe_api";
+    tag.async = true;
+    document.head.appendChild(tag);
+    appState.isYouTubeAPILoaded = true;
+  }
 }
 
-// ===== VIDEO FUNCTIONS (OPTIMIZED FOR MOBILE) =====
 function showVideo() {
   const activeAds = appState.adsData.filter(
     (ad) =>
       ad.status &&
       ad.status.toLowerCase() === "active" &&
       ad.video_url &&
-      isValidYouTubeUrl(ad.video_url)
+      isValidYouTubeUrl(ad.video_url),
   );
 
   if (activeAds.length === 0) {
@@ -310,16 +781,12 @@ function showVideo() {
   const videoWrapper = document.querySelector(".video-wrapper");
 
   console.log(
-    `📽️ Menampilkan video ${appState.currentVideoIndex + 1} dari ${
-      activeAds.length
-    }`
+    `📽️ Menampilkan video ${appState.currentVideoIndex + 1} dari ${activeAds.length}`,
   );
 
-  // Hide tables
   document.getElementById("tableEmas").style.display = "none";
   document.getElementById("tableAntam").style.display = "none";
 
-  // Clear and setup video container
   videoWrapper.innerHTML = "";
 
   const videoContainerDiv = document.createElement("div");
@@ -330,15 +797,7 @@ function showVideo() {
   videoContainer.classList.add("active");
   appState.videoPlayed = true;
 
-  // Setup YouTube player
   setTimeout(() => setupYouTubePlayer(selectedAd.video_url), 500);
-}
-
-function extractVideoId(url) {
-  const regExp =
-    /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-  const match = url.match(regExp);
-  return match && match[7].length === 11 ? match[7] : null;
 }
 
 function setupYouTubePlayer(videoUrl) {
@@ -353,7 +812,6 @@ function setupYouTubePlayer(videoUrl) {
   appState.autoplayAttempted = false;
   appState.isVideoMuted = true;
 
-  // Player vars khusus untuk mobile
   const playerVars = {
     autoplay: 1,
     mute: 1,
@@ -366,10 +824,9 @@ function setupYouTubePlayer(videoUrl) {
     iv_load_policy: 3,
   };
 
-  // Tambahkan parameter khusus untuk iOS
   if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
     playerVars.playsinline = 1;
-    playerVars.fs = 0; // Nonaktifkan fullscreen button
+    playerVars.fs = 0;
   }
 
   appState.youtubePlayer = new YT.Player("player", {
@@ -385,6 +842,13 @@ function setupYouTubePlayer(videoUrl) {
   });
 }
 
+function extractVideoId(url) {
+  const regExp =
+    /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+  const match = url.match(regExp);
+  return match && match[7].length === 11 ? match[7] : null;
+}
+
 function onPlayerReady(event) {
   console.log("✅ YouTube Player siap");
   attemptSmartAutoplay(event.target);
@@ -393,8 +857,6 @@ function onPlayerReady(event) {
 function attemptSmartAutoplay(player) {
   if (appState.autoplayAttempted) return;
   appState.autoplayAttempted = true;
-
-  console.log("🔊 Status interaksi user:", appState.userInteracted);
 
   if (appState.userInteracted) {
     try {
@@ -532,7 +994,7 @@ function playNextVideo() {
       ad.status &&
       ad.status.toLowerCase() === "active" &&
       ad.video_url &&
-      isValidYouTubeUrl(ad.video_url)
+      isValidYouTubeUrl(ad.video_url),
   );
 
   if (appState.currentVideoIndex < activeAds.length) {
@@ -569,419 +1031,8 @@ function hideVideo() {
   document.getElementById("tableEmas").style.display = "flex";
   document.getElementById("tableAntam").style.display = "flex";
 
-  // Re-adjust layout
-  setTimeout(adjustCardHeights, 100);
+  setTimeout(adjustLayout, 100);
 }
-
-// ===== DATA LOADING FUNCTIONS =====
-async function loadPriceData() {
-  try {
-    console.log("📊 Memuat data harga...");
-
-    if (isCacheValid("harga")) {
-      console.log("💾 Menggunakan data harga dari cache");
-      const cachedData = appState.cache.harga.data;
-
-      appState.tableData.emas = cachedData.filter(
-        (row) => row.tipe && row.tipe.toLowerCase() === "emas"
-      );
-      appState.tableData.antam = cachedData.filter(
-        (row) => row.tipe && row.tipe.toLowerCase() === "antam"
-      );
-      appState.tableData.archi = cachedData.filter(
-        (row) => row.tipe && row.tipe.toLowerCase() === "archi"
-      );
-
-      displayTables("emas");
-      setTimeout(() => {
-        adjustCardHeights();
-        adjustTableLayout();
-      }, 100);
-      return;
-    }
-
-    const url = `${SHEET_BASE_URL}?gid=${SHEET_CONFIG.harga.gid}&single=true&output=csv`;
-    const response = await fetch(url);
-
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-    const csvText = await response.text();
-    const data = parseCSVToJSON(csvText);
-
-    updateCache("harga", data);
-
-    appState.tableData.emas = data.filter(
-      (row) => row.tipe && row.tipe.toLowerCase() === "emas"
-    );
-    appState.tableData.antam = data.filter(
-      (row) => row.tipe && row.tipe.toLowerCase() === "antam"
-    );
-    appState.tableData.archi = data.filter(
-      (row) => row.tipe && row.tipe.toLowerCase() === "archi"
-    );
-
-    console.log(
-      `✅ Data loaded: Emas(${appState.tableData.emas.length}), Antam(${appState.tableData.antam.length}), Archi(${appState.tableData.archi.length})`
-    );
-    displayTables("emas");
-    setTimeout(() => {
-      adjustCardHeights();
-      adjustTableLayout();
-    }, 100);
-  } catch (error) {
-    console.error("❌ Error loading CSV data:", error);
-
-    if (appState.cache.harga.data) {
-      console.log("🔄 Menggunakan data cache sebagai fallback");
-      const cachedData = appState.cache.harga.data;
-
-      appState.tableData.emas = cachedData.filter(
-        (row) => row.tipe && row.tipe.toLowerCase() === "emas"
-      );
-      appState.tableData.antam = cachedData.filter(
-        (row) => row.tipe && row.tipe.toLowerCase() === "antam"
-      );
-      appState.tableData.archi = cachedData.filter(
-        (row) => row.tipe && row.tipe.toLowerCase() === "archi"
-      );
-
-      displayTables("emas");
-      setTimeout(() => {
-        adjustCardHeights();
-        adjustTableLayout();
-      }, 100);
-    } else {
-      showError();
-    }
-  }
-}
-
-async function loadRunningText() {
-  try {
-    console.log("📜 Memuat running text...");
-
-    if (isCacheValid("runningText")) {
-      console.log("💾 Menggunakan running text dari cache");
-      const cachedData = appState.cache.runningText.data;
-      processRunningTextData(cachedData);
-      return;
-    }
-
-    const url = `${SHEET_BASE_URL}?gid=${SHEET_CONFIG.runningText.gid}&single=true&output=csv`;
-    const response = await fetch(url);
-
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-    const csvText = await response.text();
-    const data = parseRunningTextCSV(csvText);
-
-    updateCache("runningText", data);
-    processRunningTextData(data);
-  } catch (error) {
-    console.error("❌ Error loading running text:", error);
-
-    if (appState.cache.runningText.data) {
-      console.log("🔄 Menggunakan running text cache");
-      processRunningTextData(appState.cache.runningText.data);
-    } else {
-      document.getElementById("marqueeText").textContent =
-        "Harga emas terkini - Informasi terupdate setiap hari";
-    }
-  }
-}
-
-async function loadAdsData() {
-  try {
-    console.log("🎬 Memuat data iklan...");
-
-    if (isCacheValid("iklan")) {
-      console.log("💾 Menggunakan data iklan dari cache");
-      appState.adsData = appState.cache.iklan.data;
-      console.log(`✅ ${appState.adsData.length} iklan loaded from cache`);
-      return;
-    }
-
-    const url = `${SHEET_BASE_URL}?gid=${SHEET_CONFIG.iklan.gid}&single=true&output=csv`;
-    const response = await fetch(url);
-
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-    const csvText = await response.text();
-    const data = parseAdsCSV(csvText);
-
-    updateCache("iklan", data);
-    appState.adsData = data;
-    console.log(`✅ ${appState.adsData.length} iklan loaded from API`);
-  } catch (error) {
-    console.error("❌ Error loading ads data:", error);
-
-    if (appState.cache.iklan.data) {
-      console.log("🔄 Menggunakan data iklan cache");
-      appState.adsData = appState.cache.iklan.data;
-    }
-  }
-}
-
-// ===== DATA PARSERS =====
-function parseAdsCSV(csvText) {
-  const lines = csvText.trim().split("\n");
-  if (lines.length < 1) return [];
-
-  if (lines.length === 1) {
-    const values = lines[0].split(",").map((v) => v.trim());
-    if (values.length >= 7) {
-      return [
-        {
-          judul: values[0],
-          deskripsi: values[1],
-          video_url: values[2],
-          gambar_url: values[3],
-          link1: values[4],
-          link2: values[5],
-          status: values[6],
-        },
-      ];
-    }
-    return [];
-  }
-
-  const headers = lines[0]
-    .split(",")
-    .map((h) => h.toLowerCase().trim().replace(/\s+/g, "_"));
-
-  return lines
-    .slice(1)
-    .map((line) => {
-      const values = line.split(",").map((v) => v.trim());
-      const obj = {};
-
-      headers.forEach((header, index) => {
-        if (index < values.length) obj[header] = values[index];
-      });
-
-      return obj;
-    })
-    .filter(
-      (ad) =>
-        ad.video_url &&
-        ad.video_url.trim() !== "" &&
-        ad.status &&
-        ad.status.toLowerCase() === "active"
-    );
-}
-
-function parseRunningTextCSV(csvText) {
-  const lines = csvText.trim().split("\n");
-  if (lines.length < 1) return [];
-  if (lines.length === 1) return [{ teks: lines[0].trim() }];
-
-  const headers = lines[0]
-    .split(",")
-    .map((h) => h.toLowerCase().trim().replace(/\s+/g, "_"));
-  const textColumn =
-    headers.find(
-      (h) =>
-        h.includes("teks") ||
-        h.includes("text") ||
-        h.includes("isi") ||
-        h.includes("running")
-    ) || headers[0];
-
-  return lines
-    .slice(1)
-    .map((line) => {
-      const values = line.split(",").map((v) => v.trim());
-      if (values.length === 1) return { teks: values[0] };
-
-      const textIndex = headers.indexOf(textColumn);
-      const teks =
-        textIndex >= 0 && textIndex < values.length
-          ? values[textIndex]
-          : values.join(" ");
-      return { teks };
-    })
-    .filter((item) => item.teks && item.teks.trim() !== "");
-}
-
-function processRunningTextData(data) {
-  if (!data || data.length === 0) {
-    document.getElementById("marqueeText").textContent =
-      "Harga emas terkini - Informasi terupdate setiap hari";
-    return;
-  }
-
-  const runningTexts = data
-    .map((item) => item.teks)
-    .filter((teks) => teks && teks.trim() !== "");
-  if (runningTexts.length === 0) {
-    document.getElementById("marqueeText").textContent =
-      "Harga emas terkini - Informasi terupdate setiap hari";
-    return;
-  }
-
-  // Untuk mobile, batasi panjang text
-  const maxLength = appState.deviceType === "mobile" ? 100 : 200;
-  const truncatedTexts = runningTexts.map((text) => {
-    if (text.length > maxLength) return text.substring(0, maxLength) + "...";
-    return text;
-  });
-
-  const marqueeContent = truncatedTexts.join(" | ");
-  const marqueeElement = document.getElementById("marqueeText");
-  marqueeElement.textContent = marqueeContent;
-
-  // Adjust speed berdasarkan device
-  const baseDuration = appState.deviceType === "mobile" ? 90 : 60;
-  const duration = Math.max(baseDuration, marqueeContent.length / 8);
-
-  marqueeElement.style.animation = "none";
-  setTimeout(
-    () =>
-      (marqueeElement.style.animation = `marquee ${duration}s linear infinite`),
-    10
-  );
-}
-
-function parseCSVToJSON(csvText) {
-  const lines = csvText.trim().split("\n");
-  if (lines.length < 2) return [];
-
-  const headers = lines[0]
-    .split(",")
-    .map((h) => h.toLowerCase().replace(/\s+/g, "_"));
-
-  return lines.slice(1).map((line) => {
-    const values = line.split(",").map((v) => v.trim());
-    const obj = {};
-
-    headers.forEach((header, index) => {
-      let value = values[index] || "";
-      if (["harga_jual", "buyback"].includes(header)) {
-        value = parseInt(value.replace(/[^0-9]/g, ""), 10) || 0;
-      }
-      obj[header] = value;
-    });
-
-    return obj;
-  });
-}
-
-// ===== TABLE DISPLAY FUNCTIONS =====
-function displayTables(type) {
-  const data = appState.tableData[type];
-  if (!data || data.length === 0) {
-    showError();
-    return;
-  }
-
-  updateTableTitles(type);
-
-  // Untuk mobile, tampilkan semua data dalam satu tabel
-  if (appState.deviceType === "mobile") {
-    updateTable("priceTableLeft", data, type);
-    document.getElementById("tableAntam").style.display = "none";
-  } else {
-    const half = Math.ceil(data.length / 2);
-    const leftData = data.slice(0, half);
-    const rightData = data.slice(half);
-
-    updateTable("priceTableLeft", leftData, type);
-    updateTable("priceTableRight", rightData, type);
-    document.getElementById("tableAntam").style.display = "flex";
-  }
-
-  setTimeout(() => {
-    adjustCardHeights();
-    adjustTableLayout();
-  }, 50);
-}
-
-function updateTableTitles(type) {
-  const tableTitles = document.querySelectorAll(".card-title");
-
-  if (type === "emas") {
-    tableTitles[0].textContent = "Harga Emas";
-    if (tableTitles[1]) tableTitles[1].textContent = "Harga Emas";
-  } else if (type === "antam") {
-    tableTitles[0].textContent = "Harga Antam";
-    if (tableTitles[1]) tableTitles[1].textContent = "Harga Antam";
-  } else if (type === "archi") {
-    tableTitles[0].textContent = "Harga Archi";
-    if (tableTitles[1]) tableTitles[1].textContent = "Harga Archi";
-  }
-}
-
-function updateTable(elementId, data, type) {
-  const tableElement = document.getElementById(elementId);
-
-  if (data.length === 0) {
-    tableElement.innerHTML = '<div class="no-data">Data tidak tersedia</div>';
-    return;
-  }
-
-  let tableHTML = `
-        <table class="price-table">
-            <thead>
-                <tr>
-                    <th>Kode</th>
-                    <th>Harga Jual</th>
-                    <th>Harga Beli</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
-  data.forEach((item) => {
-    tableHTML += `
-            <tr>
-                <td>${item.kode || "-"}</td>
-                <td class="highlight">${
-                  item.harga_jual ? formatCurrency(item.harga_jual) : "-"
-                }</td>
-                <td class="highlight">${
-                  item.buyback ? formatCurrency(item.buyback) : "-"
-                }</td>
-            </tr>
-        `;
-  });
-
-  tableHTML += `
-            </tbody>
-        </table>
-    `;
-
-  tableElement.innerHTML = tableHTML;
-}
-
-function showError() {
-  const errorHTML = `
-        <div class="error-message">
-            <i class="fas fa-exclamation-triangle"></i>
-            <p>Gagal memuat data. Silakan coba lagi.</p>
-            <button onclick="loadPriceData()" style="margin-top: 15px; padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif; font-size: 0.9rem;">
-                Muat Ulang Data
-            </button>
-        </div>
-    `;
-
-  document.getElementById("priceTableLeft").innerHTML = errorHTML;
-  document.getElementById("priceTableRight").innerHTML = errorHTML;
-}
-
-// ===== PERIODIC REFRESH =====
-function startPeriodicRefresh() {
-  setInterval(() => {
-    console.log("🔄 Memperbarui data dari server...");
-    loadPriceData();
-    loadRunningText();
-    loadAdsData();
-  }, 5 * 60 * 1000);
-}
-
-// Start refresh after everything is loaded
-setTimeout(() => {
-  startPeriodicRefresh();
-}, 10000);
 
 // ===== GLOBAL CALLBACKS =====
 window.onYouTubeIframeAPIReady = function () {
@@ -993,6 +1044,8 @@ document.addEventListener("visibilitychange", function () {
   if (document.hidden) {
     console.log("⏸️ Halaman tidak aktif");
     if (appState.rotationInterval) clearInterval(appState.rotationInterval);
+    if (appState.runningTextInterval)
+      clearInterval(appState.runningTextInterval);
   } else {
     console.log("▶️ Halaman aktif");
     if (appState.isMobile) {
@@ -1000,38 +1053,32 @@ document.addEventListener("visibilitychange", function () {
     } else {
       startRotationInterval(25000);
     }
+    startRunningTextRotation();
   }
 });
 
-// ===== CLEANUP ON UNLOAD =====
-window.addEventListener("beforeunload", function () {
-  appState.currentVideoIndex = 0;
-  appState.videoPlayed = false;
-  appState.userInteracted = false;
-  appState.autoplayAttempted = false;
-  appState.isVideoMuted = true;
+// ===== PERIODIC REFRESH =====
+setInterval(
+  () => {
+    console.log("🔄 Memperbarui data dari server...");
+    loadPriceData();
+    loadRunningText();
+    loadAdsData();
+  },
+  5 * 60 * 1000,
+);
 
+// ===== GLOBAL FUNCTIONS =====
+window.refreshData = function () {
+  showLoading();
+  loadAllData();
+};
+
+// ===== CLEANUP =====
+window.addEventListener("beforeunload", function () {
   if (appState.youtubePlayer) {
     try {
       appState.youtubePlayer.stopVideo();
     } catch (error) {}
   }
 });
-
-// ===== TOUCH EVENT FOR MOBILE =====
-document.addEventListener(
-  "touchstart",
-  function () {
-    // Prevent zoom on double tap
-    if (appState.deviceType === "mobile") {
-      document.documentElement.style.touchAction = "pan-y";
-    }
-  },
-  { passive: true }
-);
-
-// ===== INITIAL ADJUSTMENT =====
-setTimeout(() => {
-  adjustCardHeights();
-  adjustTableLayout();
-}, 1000);
