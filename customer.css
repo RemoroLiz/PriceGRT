@@ -1,0 +1,371 @@
+/* =========================================================
+   PANTES GOLD & JEWELRY — customer.css  v3
+   Halaman berbagi harga ke customer, sekarang memakai template
+   bertema per kategori (Antam, Lotus Archi, UBS, Trimas/Nota Luar,
+   Harga Perhiasan) — diadaptasi dari desain story/banner toko.
+   Setiap template bisa diunduh sebagai gambar satu per satu.
+   ========================================================= */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* PENTING: banyak browser secara default TIDAK menyertakan warna/gradasi
+   latar saat mencetak atau menyimpan sebagai PDF (untuk hemat tinta),
+   kecuali pengguna mencentang "Print background graphics" secara manual.
+   Baris ini memaksa semua warna & gradasi latar tetap disertakan, supaya
+   badge/judul di kartu tidak hilang saat dicetak/disimpan PDF. */
+* {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+  color-adjust: exact !important;
+}
+
+:root {
+  --ink:        #2b160a;   /* teks utama — espresso brown */
+  --ink-soft:   #5c3d1f;
+  --gold:       #c9991a;
+  --gold-deep:  #a87a12;
+  --gold-shine: #f0c862;
+  --paper:      #f7efdc;   /* dasar hangat seperti kertas katalog, bukan cream generik */
+  --paper-card: #fffdf8;
+  --line:       rgba(43,22,10,.12);
+  --font-body:  'Montserrat', 'Segoe UI', sans-serif;
+  --font-display: 'Playfair Display', Georgia, serif;
+}
+
+html, body { min-height: 100%; }
+body {
+  font-family: var(--font-body);
+  background: var(--paper);
+  background-image:
+    radial-gradient(circle at 15% 0%, rgba(201,153,26,.10) 0%, transparent 45%),
+    radial-gradient(circle at 100% 30%, rgba(122,32,50,.06) 0%, transparent 40%);
+  color: var(--ink);
+  padding-bottom: var(--cs-footer-h, 110px); /* ruang untuk footer sticky, diukur otomatis via JS */
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ══════════════════════════════════════════
+   HEADER (ringkasan cokim di atas, terpisah dari template kategori)
+═══════════════════════════════════════════ */
+.cs-header {
+  background-color: #2d1a06;
+  background-image: linear-gradient(160deg, #241206 0%, #3b1f0a 55%, #241206 100%);
+  padding: 20px 18px 22px;
+  position: relative;
+  overflow: hidden;
+}
+.cs-header-top {
+  display: flex; align-items: center; gap: 14px;
+  max-width: 760px; margin: 0 auto;
+}
+.cs-logo { height: 46px; width: auto; flex-shrink: 0; mix-blend-mode: screen; filter: brightness(1.2); }
+.cs-logo-trimas { height: 38px; }
+.cs-heading { flex: 1; text-align: center; min-width: 0; }
+.cs-eyebrow {
+  font-size: .62rem; letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--gold-shine); font-weight: 700; opacity: .85;
+}
+.cs-heading h1 {
+  font-family: var(--font-display); font-weight: 800; font-style: italic;
+  font-size: clamp(1.35rem, 5vw, 2.1rem); color: #fff; line-height: 1.15;
+  margin: 2px 0 3px; text-shadow: 0 2px 12px rgba(0,0,0,.4);
+}
+.cs-date {
+  font-size: .74rem; color: var(--gold-shine); letter-spacing: .3px;
+  text-transform: capitalize;
+}
+
+.cs-shimmer {
+  height: 2px; margin-top: 16px; max-width: 760px; margin-left: auto; margin-right: auto;
+  background: linear-gradient(90deg, transparent 0%, var(--gold) 20%, var(--gold-shine) 50%, var(--gold) 80%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 5s ease-in-out infinite;
+  opacity: .8;
+}
+@keyframes shimmer { 0% { background-position: 0% 0; } 100% { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .cs-shimmer { animation: none; } }
+
+.cs-cokim { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.cs-pill {
+  background: rgba(255,255,255,.06); border: 1px solid rgba(240,200,98,.28);
+  border-radius: 20px; padding: 6px 16px; font-size: .74rem; color: #fdf3da;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.cs-pill b { color: var(--gold-shine); font-weight: 800; letter-spacing: .5px; font-size: .64rem; }
+
+/* ══════════════════════════════════════════
+   QUICK NAV — chip kategori, sticky
+═══════════════════════════════════════════ */
+.cs-quicknav {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; gap: 8px; overflow-x: auto;
+  padding: 10px 16px; background: rgba(247,239,220,.92); backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--line);
+  scrollbar-width: none;
+}
+.cs-quicknav::-webkit-scrollbar { display: none; }
+.cs-chip {
+  flex-shrink: 0; text-decoration: none;
+  font-size: .72rem; font-weight: 700; letter-spacing: .3px; white-space: nowrap;
+  padding: 7px 14px; border-radius: 18px; color: var(--ink);
+  background: var(--paper-card); border: 1px solid var(--line);
+  transition: transform .15s, box-shadow .15s;
+}
+.cs-chip:active { transform: scale(.96); }
+.tpl-chip-antam     { border-color: rgba(201,153,26,.6); }
+.tpl-chip-archi     { border-color: rgba(200,30,40,.6); }
+.tpl-chip-ubs       { border-color: rgba(20,42,92,.6); }
+.tpl-chip-trimas    { border-color: rgba(0,0,0,.55); }
+.tpl-chip-perhiasan { border-color: rgba(107,67,28,.6); }
+
+/* ══════════════════════════════════════════
+   MAIN
+═══════════════════════════════════════════ */
+.cs-main { max-width: 480px; margin: 0 auto; padding: 20px 16px 12px; }
+.cs-loading, .cs-empty {
+  text-align: center; color: var(--ink-soft); padding: 40px 20px; font-size: .9rem;
+}
+
+/* ══════════════════════════════════════════
+   TEMPLATE CARDS — tema per kategori, dibuat menyerupai
+   desain story/banner toko (Antam, Lotus Archi, UBS,
+   Trimas/Nota Luar, Harga Perhiasan). Kartu inilah yang
+   ditangkap langsung oleh html2canvas saat tombol download
+   ditekan, jadi tampilan di halaman = tampilan hasil unduhan.
+═══════════════════════════════════════════ */
+.tpl-card {
+  position: relative; border-radius: 18px; overflow: hidden;
+  margin-bottom: 24px; box-shadow: 0 8px 28px rgba(0,0,0,.22);
+  scroll-margin-top: 64px;
+}
+.tpl-inner { padding: 30px 20px 32px; text-align: center; }
+
+.tpl-download-btn {
+  position: absolute; top: 12px; right: 12px; z-index: 20;
+  width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,.16); color: #fff; backdrop-filter: blur(4px);
+  transition: background .15s, transform .15s;
+}
+.tpl-download-btn:hover { background: rgba(255,255,255,.3); transform: scale(1.06); }
+.tpl-download-btn:active { transform: scale(.94); }
+.tpl-antam .tpl-download-btn { background: rgba(43,22,10,.08); color: #2b160a; }
+.tpl-antam .tpl-download-btn:hover { background: rgba(43,22,10,.16); }
+
+/* Border dekoratif ala art-deco emas, dipakai di tema gelap.
+   background-color solid ditaruh dulu sebagai cadangan — kalau
+   repeating-linear-gradient gagal dirender (mesin PDF/print atau
+   html2canvas versi tertentu), garis emas tetap terlihat solid,
+   bukan hilang/transparan sama sekali. */
+.tpl-border { height: 12px; background-color: #b8923a; background-image: repeating-linear-gradient(45deg, #d8b34a 0 6px, #8a6a1c 6px 12px); }
+
+/* Brand mark — logo ASLI (gambar), dengan teks cadangan otomatis kalau
+   file gambar gagal dimuat (lihat onerror di customer.js), supaya tidak
+   pernah muncul ikon "gambar rusak" di halaman. */
+.tpl-brand { text-align: center; margin-bottom: 10px; }
+.tpl-logo-img { display: block; margin: 0 auto; height: 46px; width: auto; object-fit: contain; }
+.tpl-brand-fallback { display: none; }
+.tpl-brand-fallback .tpl-brand-name { display: block; font-family: var(--font-display); font-weight: 800; font-size: 22px; letter-spacing: 2px; }
+.tpl-brand-fallback .tpl-brand-tri { color: #e8b23c; }
+.tpl-brand-fallback .tpl-brand-sub { display: block; font-family: var(--font-display); font-style: italic; font-size: 10px; letter-spacing: .5px; opacity: .85; margin-top: 2px; }
+.tpl-brand-light .tpl-brand-fallback .tpl-brand-name,
+.tpl-brand-light .tpl-brand-fallback .tpl-brand-sub { color: #fff; }
+.tpl-brand-dark  .tpl-brand-fallback .tpl-brand-name,
+.tpl-brand-dark  .tpl-brand-fallback .tpl-brand-sub { color: #2b160a; }
+
+/* Foto produk (logam mulia / perhiasan) — ditaruh di bawah tabel, meniru
+   penempatan foto pada desain acuan. */
+.tpl-product-shot {
+  margin-top: 18px; border-radius: 14px; overflow: hidden;
+  border: 1px solid rgba(240,200,98,.35);
+  box-shadow: 0 6px 18px rgba(0,0,0,.25);
+}
+.tpl-product-shot img { display: block; width: 100%; height: 132px; object-fit: cover; object-position: center 78%; }
+.tpl-antam .tpl-product-shot { border-color: rgba(43,22,10,.15); }
+
+.tpl-date-pill {
+  display: inline-block; margin: 0 auto 16px; padding: 6px 20px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; letter-spacing: .5px;
+}
+.tpl-antam .tpl-date-pill { background: #fff; border: 1px solid #ddd; color: #2b160a; }
+.tpl-archi .tpl-date-pill, .tpl-ubs .tpl-date-pill, .tpl-trimas .tpl-date-pill, .tpl-perhiasan .tpl-date-pill {
+  border: 1px solid rgba(240,200,98,.5); color: #f0c862; background: rgba(255,255,255,.05);
+}
+
+/* Badge pil (Antam / Lotus Archi / UBS) — SENGAJA memakai display:block +
+   text-align:center (BUKAN flex/inline-flex dengan flex-direction:column).
+   html2canvas (library pembuat gambar unduhan) punya kelemahan yang sudah
+   dikenal luas: teks di dalam flex-container arah kolom sering gagal
+   dirender/hilang total pada hasil gambar. Block layout jauh lebih andal
+   untuk di-capture, walau hasil visualnya tetap sama persis. */
+.tpl-badge {
+  display: block; text-align: center;
+  border-radius: 30px; padding: 10px 28px; margin: 4px auto 16px;
+  width: fit-content; max-width: 92%;
+}
+.tpl-badge-main { display: block; font-weight: 800; font-size: 14px; letter-spacing: .4px; white-space: nowrap; }
+.tpl-badge-sub { display: block; font-weight: 600; font-size: 10.5px; opacity: .9; margin-top: 2px; }
+.tpl-badge-antam { background-color: #a97c14; background-image: linear-gradient(135deg, #8a5a1c, #c9991a); color: #fff; }
+.tpl-badge-archi { background: #c81f28; border: 2px solid #e8b23c; color: #fff; }
+.tpl-badge-ubs   { background: #12234d; border: 2px solid #e8b23c; color: #f0c862; }
+
+/* Judul (Trimas / Harga Perhiasan) — SENGAJA memakai warna solid + glow
+   (text-shadow), BUKAN gradient "background-clip: text". html2canvas tidak
+   konsisten merender background-clip:text (sering membuat teks jadi
+   transparan/hilang total di hasil gambar unduhan) — warna solid + shadow
+   memberi efek "emas berkilau" yang serupa tapi 100% aman untuk di-capture. */
+.tpl-title-glow {
+  font-family: var(--font-body); font-weight: 800; font-size: 19px; letter-spacing: 1px;
+  text-transform: uppercase; margin: 6px 0 20px; color: #e8c468;
+  text-shadow: 0 0 14px rgba(232,196,104,.55), 0 1px 2px rgba(0,0,0,.4);
+}
+.tpl-title-script {
+  font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: 25px;
+  margin: 4px 0 18px; color: #eec96a;
+  text-shadow: 0 0 14px rgba(238,201,106,.5), 0 1px 2px rgba(0,0,0,.4);
+}
+
+/* Latar per tema — SEMUA pakai background-color solid dulu sebagai
+   cadangan sebelum background-image gradient. Ini kunci perbaikan
+   "judul hilang saat download": kalau gradient gagal dirender
+   (browser print/PDF secara default sering tidak menyertakan
+   background berwarna, atau mesin capture gambar tidak mendukung
+   sintaks gradient tertentu), latar akan JATUH ke warna solid ini
+   alih-alih jadi transparan — sehingga teks putih di atasnya tetap
+   kontras dan terbaca, bukan menyatu/hilang dengan latar di baliknya. */
+.tpl-antam     { background-color: #f3ece0; background-image: radial-gradient(circle at 15% 0%, #fff 0%, #f3ece0 60%, #ece2d0 100%); }
+.tpl-antam .tpl-inner     { color: #2b160a; }
+.tpl-archi     { background-color: #5c1119; background-image: linear-gradient(160deg, #4a0e12 0%, #7a1620 45%, #4a0e12 100%); }
+.tpl-archi .tpl-inner     { color: #fff; }
+.tpl-ubs       { background-color: #0f1f45; background-image: linear-gradient(160deg, #0a1530 0%, #142a5c 45%, #0a1530 100%); }
+.tpl-ubs .tpl-inner       { color: #fff; }
+.tpl-trimas    { background-color: #0a0a0a; background-image: radial-gradient(circle at 80% 0%, #241a05 0%, #0a0a0a 55%, #000 100%); }
+.tpl-trimas .tpl-inner    { color: #fff; }
+.tpl-perhiasan { background-color: #4a2f14; background-image: linear-gradient(160deg, #3b2510 0%, #6b431c 50%, #2b1a0a 100%); }
+.tpl-perhiasan .tpl-inner { color: #fff; }
+
+/* Tabel harga di dalam template */
+.tpl-table-wrap { margin: 0 0 16px; overflow-x: auto; }
+.tpl-table { width: 100%; border-collapse: collapse; }
+.tpl-table th, .tpl-table td { padding: 10px 6px; text-align: center; font-size: 12.5px; }
+
+.tpl-antam .tpl-table { background: #fff; border: 2px solid #1a1a1a; }
+.tpl-antam .tpl-table th { border: 1px solid #1a1a1a; font-weight: 800; color: #1a1a1a; }
+.tpl-antam .tpl-table td { border: 1px solid #1a1a1a; font-weight: 700; color: #1a1a1a; }
+.tpl-antam .tpl-table tbody tr:nth-child(even) { background: #f6f0e4; }
+
+.tpl-archi .tpl-table, .tpl-ubs .tpl-table, .tpl-perhiasan .tpl-table { border: 1px solid rgba(240,200,98,.5); }
+.tpl-archi .tpl-table th, .tpl-ubs .tpl-table th, .tpl-perhiasan .tpl-table th {
+  border: 1px solid rgba(240,200,98,.5); color: #f0c862; font-weight: 800; text-transform: uppercase; font-size: 11px;
+}
+.tpl-archi .tpl-table td, .tpl-ubs .tpl-table td, .tpl-perhiasan .tpl-table td {
+  border: 1px solid rgba(240,200,98,.35); color: #fff; font-weight: 700;
+}
+.tpl-archi .tpl-table tbody tr:nth-child(even),
+.tpl-ubs .tpl-table tbody tr:nth-child(even),
+.tpl-perhiasan .tpl-table tbody tr:nth-child(even) { background: rgba(0,0,0,.18); }
+
+.tpl-table td:first-child { font-weight: 800; }
+.tpl-sub-label { font-size: 9.5px; opacity: .8; font-weight: 600; }
+
+/* Baris pil (khusus tema Trimas / Nota Luar — tanpa tabel grid) */
+.tpl-pill-list { margin-top: 6px; }
+.tpl-pill-row {
+  display: flex; align-items: center; gap: 16px;
+  border: 2px solid #caa53d; border-radius: 30px; padding: 11px 22px;
+  margin-bottom: 10px;
+}
+.tpl-pill-list .tpl-pill-row:last-child { margin-bottom: 0; }
+.tpl-pill-label {
+  font-weight: 800; font-size: 15px; color: #fff; min-width: 44px; text-align: left;
+  padding-right: 14px; border-right: 1px solid rgba(202,165,61,.5);
+}
+.tpl-pill-value { flex: 1; font-weight: 800; font-size: 17px; color: #fff; }
+
+/* ══════════════════════════════════════════
+   FOOTER — sticky, aksi utama
+═══════════════════════════════════════════ */
+.cs-footer {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+  background: linear-gradient(0deg, #fffdf8 60%, rgba(255,253,248,.85));
+  border-top: 1px solid var(--line);
+  padding: 10px 16px 12px;
+  box-shadow: 0 -4px 16px rgba(43,22,10,.08);
+}
+.cs-updated { text-align: center; font-size: .66rem; color: var(--ink-soft); margin-bottom: 8px; }
+.cs-actions { display: flex; gap: 8px; max-width: 480px; margin: 0 auto; }
+.cs-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  border: none; border-radius: 10px; padding: 11px 8px; font-size: .76rem; font-weight: 700;
+  cursor: pointer; transition: transform .15s, opacity .15s; font-family: var(--font-body);
+  white-space: nowrap;
+}
+.cs-btn:active { transform: scale(.97); }
+.cs-btn-ghost { background: rgba(43,22,10,.06); color: var(--ink); border: 1px solid var(--line); }
+.cs-btn-ghost:hover { background: rgba(43,22,10,.1); }
+.cs-btn-primary {
+  background-color: var(--gold-deep);
+  background-image: linear-gradient(135deg, var(--gold), var(--gold-deep));
+  color: #2b1604; flex: 1.2;
+  box-shadow: 0 3px 12px rgba(201,153,26,.4);
+}
+.cs-btn.is-loading { opacity: .6; pointer-events: none; }
+
+.cs-map-link {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  max-width: 480px; margin: 10px auto 0; padding: 8px 14px;
+  border-radius: 10px; background: rgba(201,153,26,.08); border: 1px solid rgba(201,153,26,.25);
+  color: var(--gold-deep); text-decoration: none; font-size: .68rem; font-weight: 600;
+  transition: background .15s;
+}
+.cs-map-link:hover { background: rgba(201,153,26,.16); }
+.cs-map-link svg { flex-shrink: 0; }
+.cs-map-link span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+.cs-brand-footer { text-align: center; font-size: .6rem; color: var(--ink-soft); opacity: .55; margin-top: 8px; }
+.cs-footer-hint {
+  text-align: center; font-size: .62rem; color: var(--ink-soft); opacity: .7;
+  margin-top: 8px;
+}
+.cs-footer-hint svg { color: var(--gold-deep); }
+
+/* ══════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════ */
+.cs-toast {
+  position: fixed; left: 50%; bottom: 100px; z-index: 100;
+  transform: translate(-50%, 12px); opacity: 0; pointer-events: none;
+  background: var(--ink); color: #fdf3da; font-size: .78rem; font-weight: 600;
+  padding: 10px 18px; border-radius: 24px; box-shadow: 0 6px 20px rgba(0,0,0,.25);
+  transition: opacity .25s, transform .25s; white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis;
+}
+.cs-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ══════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════ */
+@media (min-width: 640px) {
+  .cs-header-top { gap: 24px; }
+  .cs-logo { height: 58px; }
+  .cs-logo-trimas { height: 48px; }
+  .tpl-inner { padding: 38px 34px 40px; }
+}
+@media (max-width: 420px) {
+  .cs-logo, .cs-logo-trimas { display: none; }
+  .cs-actions .cs-btn span { display: none; }
+}
+
+/* ══════════════════════════════════════════
+   PRINT — daftar harga bersih tanpa navigasi/tombol
+═══════════════════════════════════════════ */
+@media print {
+  body { background: #fff; padding-bottom: 0; }
+  .cs-quicknav, .cs-footer, .cs-toast, .cs-shimmer, .tpl-download-btn { display: none !important; }
+  .cs-header { background: #fff !important; color: #000; padding: 0 0 12px; }
+  .cs-heading h1, .cs-eyebrow, .cs-date { color: var(--ink) !important; text-shadow: none; }
+  .cs-logo, .cs-logo-trimas { filter: none; mix-blend-mode: normal; }
+  .cs-pill { border-color: var(--ink); color: var(--ink); background: #fff; }
+  .cs-pill b { color: var(--ink); }
+  .tpl-card { box-shadow: none; break-inside: avoid; page-break-inside: avoid; }
+  .cs-main { padding: 12px 0; max-width: 100%; }
+}

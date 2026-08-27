@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Kalkulator Harga — Pantes Gold &amp; Jewelry</title>
+  <link rel="stylesheet" href="kalkulator.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<header class="kal-header">
+  <h1>Kalkulator Harga Emas</h1>
+  <div class="kal-cokim-badge">
+    <span class="kal-cokim-label">COKIM GLOBAL</span>
+    <span class="kal-cokim-value" id="cokimValue">Memuat…</span>
+    <button class="kal-refresh-btn" id="btnRefreshCokim" title="Muat ulang cokim dari spreadsheet">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+    </button>
+  </div>
+</header>
+
+<nav class="kal-tabs">
+  <button class="kal-tab active" data-tab="jual" id="tabJual">JUAL</button>
+  <button class="kal-tab" data-tab="beli" id="tabBeli">BELI</button>
+</nav>
+
+<main class="kal-main">
+
+  <!-- ══════════ PAGE JUAL ══════════ -->
+  <section class="kal-panel active" id="panelJual">
+    <div class="kal-table-wrap">
+      <table class="kal-table">
+        <thead>
+          <tr>
+            <th>Rate (%)</th>
+            <th>Harga / gram</th>
+            <th>Berat (gr)</th>
+            <th>Sub Harga</th>
+            <th class="kal-th-del"></th>
+          </tr>
+        </thead>
+        <tbody id="bodyJual"></tbody>
+      </table>
+    </div>
+    <div class="kal-actions">
+      <button class="kal-btn kal-btn-add" id="btnAddJual">+ Tambah Barang</button>
+      <button class="kal-btn kal-btn-clear" id="btnClearJual">Clear</button>
+    </div>
+    <div class="kal-grandtotal">
+      <span class="kal-gt-label">GRAND TOTAL</span>
+      <span class="kal-gt-value" id="grandTotalJual">Rp 0</span>
+    </div>
+  </section>
+
+  <!-- ══════════ PAGE BELI ══════════ -->
+  <section class="kal-panel" id="panelBeli">
+    <div class="kal-table-wrap">
+      <table class="kal-table">
+        <thead>
+          <tr>
+            <th>Rate (%)</th>
+            <th>Spread</th>
+            <th>Selisih BB</th>
+            <th>Harga / gram</th>
+            <th>Berat (gr)</th>
+            <th>Sub Harga</th>
+            <th class="kal-th-del"></th>
+          </tr>
+        </thead>
+        <tbody id="bodyBeli"></tbody>
+      </table>
+    </div>
+    <div class="kal-actions">
+      <button class="kal-btn kal-btn-add" id="btnAddBeli">+ Tambah Barang</button>
+      <button class="kal-btn kal-btn-clear" id="btnClearBeli">Clear</button>
+    </div>
+    <div class="kal-grandtotal">
+      <span class="kal-gt-label">GRAND TOTAL</span>
+      <span class="kal-gt-value" id="grandTotalBeli">Rp 0</span>
+    </div>
+  </section>
+
+</main>
+
+<script src="config.js"></script>
+<script src="kalkulator.js"></script>
+</body>
+</html>

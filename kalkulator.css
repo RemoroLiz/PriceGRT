@@ -1,0 +1,153 @@
+/* =========================================================
+   PANTES GOLD & JEWELRY — kalkulator.css
+   Halaman berdiri sendiri (TIDAK ditautkan dari index.html /
+   customer.html manapun) untuk menghitung harga jual & buyback,
+   berdasarkan cokim_global dari Spreadsheet yang sama.
+   ========================================================= */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink: #2b160a;
+  --ink-soft: #5c3d1f;
+  --gold: #c9991a;
+  --gold-deep: #a87a12;
+  --gold-shine: #f0c862;
+  --paper: #f7efdc;
+  --paper-card: #fffdf8;
+  --line: rgba(43,22,10,.14);
+  --red: #b93b3b;
+  --font: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+html, body { min-height: 100%; }
+body {
+  font-family: var(--font);
+  background: var(--paper);
+  color: var(--ink);
+  padding-bottom: 40px;
+}
+
+/* ══════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════ */
+.kal-header {
+  background: linear-gradient(160deg, #241206 0%, #3b1f0a 55%, #241206 100%);
+  padding: 22px 18px 20px;
+  text-align: center;
+}
+.kal-header h1 {
+  font-size: clamp(1.1rem, 4vw, 1.5rem); font-weight: 800; color: #fff;
+  letter-spacing: .3px; margin-bottom: 12px;
+}
+.kal-cokim-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(240,200,98,.3);
+  border-radius: 24px; padding: 7px 16px;
+}
+.kal-cokim-label { font-size: .62rem; font-weight: 800; letter-spacing: 1.5px; color: var(--gold-shine); }
+.kal-cokim-value { font-size: .82rem; font-weight: 700; color: #fff; }
+.kal-refresh-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 50%; border: none; cursor: pointer;
+  background: rgba(240,200,98,.15); color: var(--gold-shine);
+  transition: background .15s, transform .4s;
+}
+.kal-refresh-btn:hover { background: rgba(240,200,98,.3); }
+.kal-refresh-btn.spinning svg { animation: kalSpin .6s linear infinite; }
+@keyframes kalSpin { to { transform: rotate(360deg); } }
+
+/* ══════════════════════════════════════════
+   TABS
+═══════════════════════════════════════════ */
+.kal-tabs {
+  display: flex; max-width: 720px; margin: 0 auto; position: sticky; top: 0; z-index: 30;
+  background: var(--paper); border-bottom: 1px solid var(--line);
+}
+.kal-tab {
+  flex: 1; padding: 14px 10px; font-size: .85rem; font-weight: 800; letter-spacing: 1px;
+  background: none; border: none; cursor: pointer; color: var(--ink-soft);
+  border-bottom: 3px solid transparent; transition: color .15s, border-color .15s;
+}
+.kal-tab.active { color: var(--gold-deep); border-bottom-color: var(--gold); }
+.kal-tab:hover { color: var(--ink); }
+
+/* ══════════════════════════════════════════
+   MAIN / PANELS
+═══════════════════════════════════════════ */
+.kal-main { max-width: 720px; margin: 0 auto; padding: 18px 14px 8px; }
+.kal-panel { display: none; }
+.kal-panel.active { display: block; }
+
+.kal-table-wrap {
+  overflow-x: auto; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--paper-card); box-shadow: 0 4px 16px rgba(43,22,10,.06);
+}
+.kal-table { width: 100%; border-collapse: collapse; min-width: 560px; }
+.kal-table thead th {
+  background: rgba(201,153,26,.12); color: var(--ink-soft);
+  font-size: .66rem; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
+  padding: 10px 8px; text-align: center; border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.kal-th-del { width: 36px; }
+.kal-table tbody td {
+  padding: 8px; text-align: center; border-bottom: 1px solid var(--line); vertical-align: middle;
+}
+.kal-table tbody tr:last-child td { border-bottom: none; }
+.kal-table tbody tr:nth-child(even) { background: rgba(201,153,26,.035); }
+
+.kal-input {
+  width: 100%; min-width: 84px; padding: 8px 9px; text-align: center;
+  border: 1px solid var(--line); border-radius: 8px; font-size: .85rem; font-weight: 700;
+  color: var(--ink); font-family: var(--font); background: #fff;
+}
+.kal-input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,153,26,.15); }
+.kal-input::placeholder { color: #c9bda8; font-weight: 500; }
+
+.kal-cell-computed {
+  font-weight: 800; color: var(--gold-deep); font-size: .85rem; white-space: nowrap;
+}
+
+.kal-del-btn {
+  width: 26px; height: 26px; border-radius: 50%; border: none; cursor: pointer;
+  background: rgba(185,59,59,.1); color: var(--red); font-size: .8rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; margin: 0 auto;
+  transition: background .15s;
+}
+.kal-del-btn:hover { background: rgba(185,59,59,.22); }
+
+/* ══════════════════════════════════════════
+   ACTIONS & GRAND TOTAL
+═══════════════════════════════════════════ */
+.kal-actions { display: flex; gap: 10px; margin: 14px 0; }
+.kal-btn {
+  flex: 1; padding: 12px 14px; border-radius: 10px; border: none; cursor: pointer;
+  font-family: var(--font); font-weight: 800; font-size: .85rem; letter-spacing: .3px;
+  transition: transform .15s, opacity .15s;
+}
+.kal-btn:active { transform: scale(.97); }
+.kal-btn-add {
+  background: linear-gradient(135deg, var(--gold), var(--gold-deep)); color: #fff;
+  box-shadow: 0 3px 12px rgba(201,153,26,.35);
+}
+.kal-btn-clear {
+  background: #fff; color: var(--red); border: 1.5px solid rgba(185,59,59,.4);
+}
+.kal-btn-clear:hover { background: rgba(185,59,59,.06); }
+
+.kal-grandtotal {
+  display: flex; align-items: center; justify-content: space-between;
+  background: linear-gradient(135deg, #241206, #3b1f0a);
+  border-radius: 12px; padding: 16px 20px;
+}
+.kal-gt-label { font-size: .72rem; font-weight: 800; letter-spacing: 1.5px; color: var(--gold-shine); }
+.kal-gt-value { font-size: clamp(1.15rem, 5vw, 1.6rem); font-weight: 800; color: #fff; }
+
+/* ══════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .kal-main { padding: 14px 10px 6px; }
+  .kal-actions { flex-direction: column; }
+}

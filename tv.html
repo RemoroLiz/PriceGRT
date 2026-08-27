@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Pantes Gold & Jewelry — Digital Signage Price Board</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     TOPBAR CONTROL
+══════════════════════════════════════ -->
+<div class="ctrl-bar" id="ctrlBar">
+  <div class="ctrl-inner">
+
+    <div class="ctrl-cokim" id="cokimBar"></div>
+
+    <div class="ctrl-clock">
+      <span class="ctrl-time" id="clock">--:--:--</span>
+      <span class="ctrl-date" id="date">-- / -- / ----</span>
+      <span class="ctrl-now" id="ctrlNow"></span>
+    </div>
+
+    <div class="ctrl-right">
+      <div class="status-badge">
+        <span class="sdot" id="statusDot"></span>
+        <span id="statusText">Memuat…</span>
+      </div>
+      <div class="ctrl-btns">
+        <button class="cb" id="btnPrev" title="Slide sebelumnya">&#9664;</button>
+        <button class="cb cb-pause" id="btnPause" title="Pause">&#9646;&#9646;</button>
+        <button class="cb" id="btnNext" title="Slide berikutnya">&#9654;</button>
+        <button class="cb cb-mute" id="btnMute" title="Aktifkan suara video" style="display:none;">
+          <svg class="icon-muted" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <line x1="22" y1="9" x2="16" y2="15"/>
+            <line x1="16" y1="9" x2="22" y2="15"/>
+          </svg>
+          <svg class="icon-unmuted" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+          </svg>
+        </button>
+      </div>
+      <button class="btn-refresh" id="btnRefresh" title="Muat ulang data dari Spreadsheet">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+        Refresh
+      </button>
+    </div>
+
+  </div>
+  <div class="story-progress" id="storyProgress"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MAIN LAYOUT: TABEL HARGA (kiri) + VIDEO (kanan)
+     Panel video berjalan independen dari slideshow tabel.
+══════════════════════════════════════ -->
+<div class="main-layout">
+  <div class="sw" id="slideshowWrap">
+    <!-- Slide-slide tabel harga dibuat otomatis oleh script.js
+         berdasarkan data dari Spreadsheet (1 sheet = 1 page,
+         maksimal 10 baris per slide). -->
+  </div>
+
+  <aside class="video-panel" id="videoPanel">
+    <!-- Video promo autoplay + loop dari Google Drive (sheet VIDEO).
+         Dikelola sepenuhnya oleh script.js, tidak reset saat
+         slideshow tabel berganti. -->
+  </aside>
+</div>
+
+<script src="config.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Pantes Gold & Jewelry — Daftar Harga</title>
+  <meta name="description" content="Daftar harga emas &amp; perhiasan terbaru Pantes Gold & Jewelry."/>
+  <link rel="stylesheet" href="customer.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800;900&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<header class="cs-header">
+  <div class="cs-header-top">
+    <img src="assets/pantesputih.png" class="cs-logo" alt="Pantes Gold &amp; Jewelry"/>
+    <div class="cs-heading">
+      <p class="cs-eyebrow">Pantes Gold &amp; Jewelry</p>
+      <h1>Daftar Harga Hari&nbsp;Ini</h1>
+      <p class="cs-date" id="csDate">Memuat tanggal…</p>
+    </div>
+    <img src="assets/trimas_putih.png" class="cs-logo cs-logo-trimas" alt="Trimas"/>
+  </div>
+  <div class="cs-shimmer" aria-hidden="true"></div>
+  <div class="cs-cokim" id="csCokim"></div>
+</header>
+
+<nav class="cs-quicknav" id="csQuickNav" aria-label="Lompat ke kategori harga"></nav>
+
+<main class="cs-main" id="csMain">
+  <p class="cs-loading">Memuat daftar harga…</p>
+</main>
+
+<footer class="cs-footer" id="csFooter">
+  <p class="cs-updated" id="csUpdated"></p>
+  <div class="cs-actions">
+    <button class="cs-btn cs-btn-ghost" id="csRefresh" title="Muat ulang harga terbaru">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      <span>Refresh</span>
+    </button>
+    <button class="cs-btn cs-btn-ghost" id="csPrint" title="Cetak daftar harga">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      <span>Cetak</span>
+    </button>
+    <button class="cs-btn cs-btn-primary" id="csShare" title="Bagikan halaman ini ke customer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      <span>Bagikan</span>
+    </button>
+  </div>
+  <p class="cs-footer-hint">Tekan ikon <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> di tiap kartu untuk unduh gambar kategori tersebut.</p>
+  <a class="cs-map-link" href="https://maps.app.goo.gl/amaZTYFvsmDnbWSA9" target="_blank" rel="noopener noreferrer"
+     title="Jl. AH. Nasution No.219, Pasirjati, Kec. Ujung Berung, Kota Bandung, Jawa Barat 40617">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    <span>Jl. AH. Nasution No.219, Pasirjati, Ujung Berung, Bandung 40617</span>
+  </a>
+  <p class="cs-brand-footer">Pantes Gold &amp; Jewelry — harga sewaktu-waktu dapat berubah</p>
+</footer>
+
+<div class="cs-toast" id="csToast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="config.js"></script>
+<script src="customer.js"></script>
+</body>
+</html>
