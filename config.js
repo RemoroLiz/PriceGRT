@@ -31,7 +31,7 @@ const CONFIG = {
      PENTING: setiap kali Deploy > New version/deployment baru, Apps Script
      BISA membuat URL /exec baru — selalu perbarui baris ini setelahnya.
      Berlaku untuk index.html (TV) MAUPUN customer.html (berbagi harga). */
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwPz8DC9YAMsS277zbtNcCGOIgKkRcNcem6DANomkqpqAF4vT0chlMT8XqvxAyzc6JU/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbysDWm9-r_IJcveMuD_TfZitM3IiZqhlI9cMaoOQUAF4xH87_YHF6dcSrg8AGatJ26WHQ/exec',
 };
 
 /** Tentukan mode live/demo secara otomatis dari isi GAS_URL — ini mencegah
